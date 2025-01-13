@@ -58,7 +58,15 @@ performance issue because these strings are used only when there is an error.
 
 Each substring ends with \0 to insert a null character. This includes the final
 substring, so that the whole string ends with \0\0, which can be detected when
-counting through. */
+counting through.
+
+In the rare configuration of EBCDIC-with-ASCII-compiler, we currently output
+ASCII strings for the error messages, which is unlikely to cause complaints if
+some client does want to use PCRE2 on Linux or Windows to process their EBCDIC
+files.
+
+XXX No! Let's just make it 100% EBCDIC.
+*/
 
 static const unsigned char compile_error_texts[] =
   "no error\0"
@@ -146,7 +154,7 @@ static const unsigned char compile_error_texts[] =
 #ifndef EBCDIC
   "\\c must be followed by a printable ASCII character\0"
 #else
-  "\\c must be followed by a letter or one of [\\]^_?\0"
+  "\\c must be followed by a letter or one of @[\\]^_?\0"
 #endif
   "\\k is not followed by a braced, angle-bracketed, or quoted name\0"
   /* 70 */

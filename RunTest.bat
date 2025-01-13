@@ -114,6 +114,7 @@ set do24=no
 set do25=no
 set do26=no
 set do27=no
+@rem XXX ADD TEST 28
 set all=yes
 
 for %%a in (%*) do (

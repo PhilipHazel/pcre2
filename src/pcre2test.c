@@ -244,18 +244,43 @@ to hold them as 32-bit code units. */
 
 enum { PR_OK, PR_SKIP, PR_ABEND };
 
+/* The macro EBCDIC_IO describes whether pcre2tests takes ASCII or EBCDIC as
+its input files (or terminal input). If the compiler uses ASCII for character
+literals, then we make pcre2test take ASCII as its input and output. This is
+different to the core PCRE2 library, where we use macros like "CHAR_A" for every
+single character and string literal used in pattern parsing and matching. It
+would simply be too arduous to do the same for pcre2test, so we make its
+input/output format match the compiler's codepage. */
+#if defined(EBCDIC) && 'a' == 0x81
+#define EBCDIC_IO 1
+#else
+#define EBCDIC_IO 0
+#endif
+
 /* The macro PRINTABLE determines whether to print an output character as-is or
 as a hex value when showing compiled patterns. We use it in cases when the
 locale has not been explicitly changed, so as to get consistent output from
 systems that differ in their output from isprint() even in the "C" locale. */
 
-#ifdef EBCDIC
+#if defined(EBCDIC) && !EBCDIC_IO
+#define PRINTABLE(c) (ebcdic_to_ascii(c) >= 32 && ebcdic_to_ascii(c) < 127)
+#elif defined(EBCDIC)
 #define PRINTABLE(c) ((c) >= 64 && (c) < 255)
 #else
 #define PRINTABLE(c) ((c) >= 32 && (c) < 127)
 #endif
 
-#define PRINTOK(c) ((use_tables != NULL && c < 256)? isprint(c) : PRINTABLE(c))
+/* The macro CHAR_OUTPUT is used to output characters in pcre2test's output
+format. The input character is encoded in PCRE2's native codepage (EBCDIC, if
+enabled), but the output may differ in the case where pcre2test uses ASCII input
+and output. */
+#if defined(EBCDIC) && !EBCDIC_IO
+#define CHAR_OUTPUT(c)  ebcdic_to_ascii(c)
+#define CHAR_INPUT(c)   ascii_to_ebcdic(c)
+#else
+#define CHAR_OUTPUT(c)  (c)
+#define CHAR_INPUT(c)   (c)
+#endif
 
 /* We have to include some of the library source files because we need
 to use some of the macros, internal structure definitions, and other internal
@@ -270,24 +295,29 @@ so that the PCRE2_EXP_xxx macros get set appropriately for an application, not
 for building the library.
 
 Setting PCRE2_CODE_UNIT_WIDTH to zero cuts out all the width-specific settings
-in pcre2.h and pcre2_internal.h. Defining PCRE2_BUILDING_PCRE2TEST cuts out the
-check in pcre2_internal.h that ensures PCRE2_CODE_UNIT_WIDTH is 8, 16, or 32
-(which it needs to be when compiling one of the libraries). */
+in pcre2.h and pcre2_internal.h. Defining PCRE2_PCRE2TEST cuts out the check in
+pcre2_internal.h that ensures PCRE2_CODE_UNIT_WIDTH is 8, 16, or 32 (which it
+needs to be when compiling one of the libraries). */
 
 #define PRIV(name) name
 #define PCRE2_CODE_UNIT_WIDTH 0
-#define PCRE2_BUILDING_PCRE2TEST
+#define PCRE2_PCRE2TEST
 #include "pcre2.h"
 #include "pcre2posix.h"
 #include "pcre2_internal.h"
 
-/* We need access to some of the data tables that PCRE2 uses. Defining
-PCRE2_PCRE2TEST makes some minor changes in the files. The previous definition
-of PRIV avoids name clashes. */
+/* We need access to some of the data tables that PCRE2 uses. The previous
+definition of PCRE2_PCRE2TEST makes some minor changes in the files. The
+previous definition of PRIV avoids name clashes. */
 
-#define PCRE2_PCRE2TEST
 #include "pcre2_tables.c"
 #include "pcre2_ucd.c"
+
+/* Forward-declarations for PRINTABLE(). */
+
+static void ascii_to_ebcdic_str(uint8_t *buf, size_t len);
+static uint32_t ascii_to_ebcdic(uint32_t c);
+static uint32_t ebcdic_to_ascii(uint32_t c);
 
 /* 32-bit integer values in the input are read by strtoul() or strtol(). The
 check needed for overflow depends on whether long ints are in fact longer than
@@ -948,6 +978,7 @@ static coptstruct coptlist[] = {
   { "bsr",         CONF_BSR, PCRE2_CONFIG_BSR },
   { "ebcdic",      CONF_FIX, SUPPORT_EBCDIC },
   { "ebcdic-nl",   CONF_FIZ, EBCDIC_NL },
+  { "ebcdic-io",   CONF_FIX, EBCDIC_IO },
   { "jit",         CONF_INT, PCRE2_CONFIG_JIT },
   { "jitusable",   CONF_JU,  0 },
   { "linksize",    CONF_INT, PCRE2_CONFIG_LINKSIZE },
@@ -964,6 +995,8 @@ static coptstruct coptlist[] = {
 #undef SUPPORT_16
 #undef SUPPORT_32
 #undef SUPPORT_EBCDIC
+#undef EBDCIC_NL
+#undef BACKSLASH_C
 
 /* Types for the parser, to be used in process_data() */
 
@@ -1035,9 +1068,7 @@ static uint32_t loadtables_length = 0;
 
 /* We need buffers for building 16/32-bit strings; 8-bit strings don't need
 rebuilding, but set up the same naming scheme for use in macros. The "buffer"
-buffer is where all input lines are read. Its size is the same as pbuffer8.
-Pattern lines are always copied to pbuffer8 for use in callouts, even if they
-are actually compiled from pbuffer16 or pbuffer32. */
+buffer is where all input lines are read. Its size is the same as pbuffer8. */
 
 static size_t    pbuffer8_size  = 50000;        /* Initial size, bytes */
 static uint8_t  *pbuffer8 = NULL;
@@ -3006,6 +3037,32 @@ return (PCRE2_JIT_STACK *)arg;
 
 
 /*************************************************
+*         EBCDIC support functions               *
+*************************************************/
+
+#if defined(EBCDIC) && !EBCDIC_IO
+static void
+ascii_to_ebcdic_str(uint8_t *buf, size_t len)
+{
+for (size_t i = 0; i < len; ++i)
+  buf[i] = ascii_to_ebcdic_1047[buf[i]];
+}
+
+static uint32_t
+ascii_to_ebcdic(uint32_t c)
+{
+return (c < 256)? ascii_to_ebcdic_1047[c] : c;
+}
+
+static uint32_t
+ebcdic_to_ascii(uint32_t c)
+{
+return (c < 256)? ebcdic_1047_to_ascii[c] : c;
+}
+#endif
+
+
+/*************************************************
 *      Convert UTF-8 character to code point     *
 *************************************************/
 
@@ -3092,11 +3149,14 @@ pchar(uint32_t c, BOOL utf, FILE *f)
 int n = 0;
 char tempbuffer[16];
 
-if (PRINTOK(c))
+if (PRINTABLE(c))
   {
+  c = CHAR_OUTPUT(c);
   if (f != NULL) fprintf(f, "%c", c);
   return 1;
   }
+
+c = CHAR_OUTPUT(c);
 
 if (c < 0x100)
   {
@@ -3461,59 +3521,6 @@ else while (len > 0)
 return 0;
 }
 #endif /* SUPPORT_PCRE2_32 */
-
-
-
-/* This function is no longer used. Keep it around for a while, just in case it
-needs to be re-instated. */
-
-#ifdef NEVERNEVERNEVER
-
-/*************************************************
-*         Move back by so many characters        *
-*************************************************/
-
-/* Given a code unit offset in a subject string, move backwards by a number of
-characters, and return the resulting offset.
-
-Arguments:
-  subject   pointer to the string
-  offset    start offset
-  count     count to move back by
-  utf       TRUE if in UTF mode
-
-Returns:   a possibly changed offset
-*/
-
-static PCRE2_SIZE
-backchars(uint8_t *subject, PCRE2_SIZE offset, uint32_t count, BOOL utf)
-{
-if (!utf || test_mode == PCRE32_MODE)
-  return (count >= offset)? 0 : (offset - count);
-
-else if (test_mode == PCRE8_MODE)
-  {
-  PCRE2_SPTR8 pp = (PCRE2_SPTR8)subject + offset;
-  for (; count > 0 && pp > (PCRE2_SPTR8)subject; count--)
-    {
-    pp--;
-    while ((*pp & 0xc0) == 0x80) pp--;
-    }
-  return pp - (PCRE2_SPTR8)subject;
-  }
-
-else  /* 16-bit mode */
-  {
-  PCRE2_SPTR16 pp = (PCRE2_SPTR16)subject + offset;
-  for (; count > 0 && pp > (PCRE2_SPTR16)subject; count--)
-    {
-    pp--;
-    if ((*pp & 0xfc00) == 0xdc00) pp--;
-    }
-  return pp - (PCRE2_SPTR16)subject;
-  }
-}
-#endif  /* NEVERNEVERNEVER */
 
 
 
@@ -4603,7 +4610,21 @@ if (len < 0)
 else
   {
   fprintf(outfile, "%s", before);
-  PCHARSV(CASTVAR(void *, pbuffer), 0, len, FALSE, outfile);
+
+  /* In the rare configuration of EBCDIC-with-ASCII-compiler, we currently
+  output ASCII strings for the error messages, so we do special filtering for
+  that here. */
+
+#ifdef SUPPORT_PCRE2_16
+  if (test_mode == PCRE16_MODE)
+    for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer16[i];
+#endif
+#ifdef SUPPORT_PCRE2_32
+  if (test_mode == PCRE32_MODE)
+    for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer32[i];
+#endif
+  fprintf(outfile, "%s", pbuffer8);
+
   fprintf(outfile, "%s", after);
   }
 return len >= 0;
@@ -4630,7 +4651,9 @@ static int callout_callback(pcre2_callout_enumerate_block_8 *cb,
   void *callout_data)
 {
 uint32_t i;
+void *pattern_string = CASTVAR(void *, pbuffer);
 BOOL utf = (FLD(compiled_code, overall_options) & PCRE2_UTF) != 0;
+int next_item_length = cb->next_item_length;
 
 (void)callout_data;  /* Not currently displayed */
 
@@ -4638,7 +4661,7 @@ fprintf(outfile, "Callout ");
 if (cb->callout_string != NULL)
   {
   uint32_t delimiter = CODE_UNIT(cb->callout_string, -1);
-  fprintf(outfile, "%c", delimiter);
+  fprintf(outfile, "%c", CHAR_OUTPUT(delimiter));
   PCHARSV(cb->callout_string, 0,
     cb->callout_string_length, utf, outfile);
   for (i = 0; callout_start_delims[i] != 0; i++)
@@ -4647,13 +4670,14 @@ if (cb->callout_string != NULL)
       delimiter = callout_end_delims[i];
       break;
       }
-  fprintf(outfile, "%c  ", delimiter);
+  fprintf(outfile, "%c  ", CHAR_OUTPUT(delimiter));
   }
 else fprintf(outfile, "%d  ", cb->callout_number);
 
-fprintf(outfile, "%.*s\n",
-  (int)((cb->next_item_length == 0)? 1 : cb->next_item_length),
-  pbuffer8 + cb->pattern_position);
+if (next_item_length == 0 && CODE_UNIT(pattern_string, cb->pattern_position) != 0)
+  next_item_length = 1;
+PCHARSV(pattern_string, cb->pattern_position, next_item_length, utf, outfile);
+fprintf(outfile, "\n");
 
 return 0;
 }
@@ -4948,22 +4972,27 @@ if ((pat_patctl.control & CTL_INFO) != 0)
     const char *caseless =
       ((FLD(compiled_code, flags) & PCRE2_FIRSTCASELESS) == 0)?
       "" : " (caseless)";
-    if (PRINTOK(first_cunit))
-      fprintf(outfile, "First code unit = \'%c\'%s\n", first_cunit, caseless);
+    if (first_cunit != 0xff && PRINTABLE(first_cunit))
+      fprintf(outfile, "First code unit = \'%c\'%s\n", CHAR_OUTPUT(first_cunit),
+              caseless);
     else
       {
       fprintf(outfile, "First code unit = ");
-      pchar(first_cunit, FALSE, outfile);
+      if (first_cunit == 0xff)
+        fprintf(outfile, "\\xff");
+      else
+        pchar(first_cunit, FALSE, outfile);
       fprintf(outfile, "%s\n", caseless);
       }
     }
   else if (start_bits != NULL)
     {
-    int i;
+    int input;
     int c = 24;
     fprintf(outfile, "Starting code units:");
-    for (i = 0; i < 256; i++)
+    for (input = 0; input < 256; input++)
       {
+      int i = CHAR_INPUT(input);
       if ((start_bits[i/8] & (1u << (i&7))) != 0)
         {
         if (c > 75)
@@ -4971,14 +5000,14 @@ if ((pat_patctl.control & CTL_INFO) != 0)
           fprintf(outfile, "\n ");
           c = 2;
           }
-        if (PRINTOK(i) && i != ' ')
+        if (PRINTABLE(i) && i != CHAR_SPACE)
           {
-          fprintf(outfile, " %c", i);
+          fprintf(outfile, " %c", CHAR_OUTPUT(i));
           c += 2;
           }
         else
           {
-          fprintf(outfile, " \\x%02x", i);
+          fprintf(outfile, " \\x%02x", CHAR_OUTPUT(i));
           c += 5;
           }
         }
@@ -4991,8 +5020,9 @@ if ((pat_patctl.control & CTL_INFO) != 0)
     const char *caseless =
       ((FLD(compiled_code, flags) & PCRE2_LASTCASELESS) == 0)?
       "" : " (caseless)";
-    if (PRINTOK(last_cunit))
-      fprintf(outfile, "Last code unit = \'%c\'%s\n", last_cunit, caseless);
+    if (PRINTABLE(last_cunit))
+      fprintf(outfile, "Last code unit = \'%c\'%s\n", CHAR_OUTPUT(last_cunit),
+              caseless);
     else
       {
       fprintf(outfile, "Last code unit = ");
@@ -5510,10 +5540,10 @@ if (pat_patctl.jit == 0 &&
     (pat_patctl.control & (CTL_JITVERIFY|CTL_JITFAST)) != 0)
   pat_patctl.jit = JIT_DEFAULT;
 
-/* Now copy the pattern to pbuffer8 for use in 8-bit testing and for reflecting
-in callouts. Convert from hex if requested (literal strings in quotes may be
-present within the hexadecimal pairs). The result must necessarily be fewer
-characters so will always fit in pbuffer8. */
+/* Now copy the pattern to pbuffer8 for use in 8-bit testing. Convert from hex
+if requested (literal strings in quotes may be present within the hexadecimal
+pairs). The result must necessarily be fewer characters so will always fit in
+pbuffer8. */
 
 if ((pat_patctl.control & CTL_HEXPAT) != 0)
   {
@@ -5812,6 +5842,10 @@ if ((pat_patctl.control & CTL_POSIX) != 0)
     cflags |= REG_PEND;
     }
 
+#if defined(EBCDIC) && !EBCDIC_IO
+  ascii_to_ebcdic_str(pbuffer8, patlen);
+#endif
+
   rc = regcomp(&preg, (char *)pbuffer8, cflags);
 
   /* Compiling failed */
@@ -5903,6 +5937,10 @@ if ((pat_patctl.control & (CTL_PUSH|CTL_PUSHCOPY|CTL_PUSHTABLESCOPY)) != 0)
 
 errorcode = 0;
 
+#if defined(EBCDIC) && !EBCDIC_IO
+ascii_to_ebcdic_str(pbuffer8, patlen);
+#endif
+
 #ifdef SUPPORT_PCRE2_16
 if (test_mode == PCRE16_MODE) errorcode = to16(pbuffer8, utf, &patlen);
 #endif
@@ -5966,7 +6004,7 @@ if (pat_patctl.convert_type != CONVERT_UNSET)
     {
     uint32_t escape = (pat_patctl.convert_glob_escape == '0')? 0 :
       pat_patctl.convert_glob_escape;
-    PCRE2_SET_GLOB_ESCAPE(rc, con_context, escape);
+    PCRE2_SET_GLOB_ESCAPE(rc, con_context, CHAR_INPUT(escape));
     if (rc != 0)
       {
       fprintf(outfile, "** Invalid glob escape '%c'\n",
@@ -5978,7 +6016,8 @@ if (pat_patctl.convert_type != CONVERT_UNSET)
 
   if (pat_patctl.convert_glob_separator != 0)
     {
-    PCRE2_SET_GLOB_SEPARATOR(rc, con_context, pat_patctl.convert_glob_separator);
+    uint32_t separator = pat_patctl.convert_glob_separator;
+    PCRE2_SET_GLOB_SEPARATOR(rc, con_context, CHAR_INPUT(separator));
     if (rc != 0)
       {
       fprintf(outfile, "** Invalid glob separator '%c'\n",
@@ -6516,7 +6555,7 @@ case_transform(int to_case, int num_in, int *num_read, int *num_write,
   uint32_t *c1, uint32_t *c2)
 {
 /* Let's have one character which aborts the substitution. */
-if (*c1 == '!') return FALSE;
+if (*c1 == CHAR_EXCLAMATION_MARK) return FALSE;
 
 /* Default behaviour is to read one character, and write back that same one
 character (treating all characters as "uncased"). */
@@ -6524,106 +6563,107 @@ character (treating all characters as "uncased"). */
 
 /* Add a normal case pair 'a' (l) <-> 'B' (t,u). Standard ASCII letter
 behaviour, but with switched letters for testing. */
-if (*c1 == 'a' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'B';
-else if (*c1 == 'B' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'a';
+if (*c1 == CHAR_a && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_B;
+else if (*c1 == CHAR_B && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_a;
 
 /* Add a titlecased triplet 'd' (l) <-> 'D' (t) <-> 'Z' (u). Example: the
 'dz'/'Dz'/'DZ' ligature character ("Latin Small Letter DZ" <-> "Latin Capital
 Letter D with Small Letter Z" <-> "Latin Capital Letter DZ"). */
-else if (*c1 == 'd' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)? 'D' : 'Z';
-else if (*c1 == 'D' && to_case != PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)
-  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_LOWER)? 'd' : 'Z';
-else if (*c1 == 'Z' && to_case != PCRE2_SUBSTITUTE_CASE_UPPER)
-  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_LOWER)? 'd' : 'D';
+else if (*c1 == CHAR_d && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)? CHAR_D : CHAR_Z;
+else if (*c1 == CHAR_D && to_case != PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)
+  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_LOWER)? CHAR_d : CHAR_Z;
+else if (*c1 == CHAR_Z && to_case != PCRE2_SUBSTITUTE_CASE_UPPER)
+  *c1 = (to_case == PCRE2_SUBSTITUTE_CASE_LOWER)? CHAR_d : CHAR_D;
 
 /* Expands when uppercased. Example: Esszet 'f' <-> 'SS'. */
-else if (*c1 == 'f' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+else if (*c1 == CHAR_f && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'S';
-  *c2 = 'S';
+  *c1 = CHAR_S;
+  *c2 = CHAR_S;
   *num_write = 2;
   }
-else if (*c1 == 's' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'S';
-else if (*c1 == 'S' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 's';
+else if (*c1 == CHAR_s && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_S;
+else if (*c1 == CHAR_S && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_s;
 
 /* Expanding and contracting characters, 'o' <-> 'OO'. You can get this purely
 due to UTF-8 encoding length, for example uppercase Omega (3 bytes in UTF-8)
 lowercases to 2 bytes in UTF-8. */
-else if (num_in == 2 && *c1 == 'O' && *c2 == 'O' &&
+else if (num_in == 2 && *c1 == CHAR_O && *c2 == CHAR_O &&
          to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'o';
+  *c1 = CHAR_o;
   *num_read = 2;
   }
-else if (*c1 == 'o' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+else if (*c1 == CHAR_o && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'O';
-  *c2 = 'O';
+  *c1 = CHAR_O;
+  *c2 = CHAR_O;
   *num_write = 2;
   }
-else if (num_in == 2 && *c1 == 'p' && *c2 == 'p' &&
+else if (num_in == 2 && *c1 == CHAR_p && *c2 == CHAR_p &&
          to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'P';
+  *c1 = CHAR_P;
   *num_read = 2;
   }
-else if (*c1 == 'P' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+else if (*c1 == CHAR_P && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'p';
-  *c2 = 'p';
+  *c1 = CHAR_p;
+  *c2 = CHAR_p;
   *num_write = 2;
   }
 
 /* Use 'l' -> 'Mn' or 'MN' as an expanding ligature, like 'fi' -> 'Fi' ->
 'FI'. */
-else if (*c1 == 'l' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+else if (*c1 == CHAR_l && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
   {
-  *c1 = 'M';
-  *c2 = (to_case == PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)? 'n' : 'N';
+  *c1 = CHAR_M;
+  *c2 = (to_case == PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)? CHAR_n : CHAR_N;
   *num_write = 2;
   }
-else if (*c1 == 'M' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'm';
-else if (*c1 == 'm' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'M';
-else if (*c1 == 'N' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'n';
-else if (*c1 == 'n' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'N';
+else if (*c1 == CHAR_M && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_m;
+else if (*c1 == CHAR_m && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_M;
+else if (*c1 == CHAR_N && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_n;
+else if (*c1 == CHAR_n && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_N;
 
 /* An example of a context-dependent mapping, the Greek Sigma. It lowercases
 depending on the following character. Use 'c'/'k' -> 'K'. */
-else if ((*c1 == 'c' || *c1 == 'k') && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'K';
-else if (*c1 == 'K' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = (num_in == 1 || *c2 == ' ')? 'c' : 'k';
+else if ((*c1 == CHAR_c || *c1 == CHAR_k) &&
+         to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_K;
+else if (*c1 == CHAR_K && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = (num_in == 1 || *c2 == CHAR_SPACE)? CHAR_c : CHAR_k;
 
 /* An example of a context-dependent multi mapping, the Dutch IJ. When those
 letters appear together, they titlecase 'ij' (l) <-> 'IJ' (t) <-> 'IJ' (u).
 Namely, English titlecasing of 'ijnssel' would be 'Ijnssel' (just uppercase the
 first letter), but the Dutch rule is 'IJnssel'. */
-else if (num_in == 2 && (*c1 == 'i' || *c1 == 'I') &&
-         (*c2 == 'j' || *c2 == 'J') &&
+else if (num_in == 2 && (*c1 == CHAR_i || *c1 == CHAR_I) &&
+         (*c2 == CHAR_j || *c2 == CHAR_J) &&
          to_case == PCRE2_SUBSTITUTE_CASE_TITLE_FIRST)
   {
-  *c1 = 'I';
-  *c2 = 'J';
+  *c1 = CHAR_I;
+  *c2 = CHAR_J;
   *num_read = 2;
   *num_write = 2;
   }
-else if (*c1 == 'i' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'I';
-else if (*c1 == 'I' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'i';
-else if (*c1 == 'j' && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'J';
-else if (*c1 == 'J' && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
-  *c1 = 'j';
+else if (*c1 == CHAR_i && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_I;
+else if (*c1 == CHAR_I && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_i;
+else if (*c1 == CHAR_j && to_case != PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_J;
+else if (*c1 == CHAR_J && to_case == PCRE2_SUBSTITUTE_CASE_LOWER)
+  *c1 = CHAR_j;
 
 return TRUE;
 }
@@ -6788,7 +6828,7 @@ if (cb->callout_string != NULL)
   {
   uint32_t delimiter = CODE_UNIT(cb->callout_string, -1);
   fprintf(outfile, "Callout (%" SIZ_FORM "): %c",
-    cb->callout_string_offset, delimiter);
+    cb->callout_string_offset, CHAR_OUTPUT(delimiter));
   PCHARSV(cb->callout_string, 0,
     cb->callout_string_length, utf, outfile);
   for (i = 0; callout_start_delims[i] != 0; i++)
@@ -6797,7 +6837,7 @@ if (cb->callout_string != NULL)
       delimiter = callout_end_delims[i];
       break;
       }
-  fprintf(outfile, "%c", delimiter);
+  fprintf(outfile, "%c", CHAR_OUTPUT(delimiter));
   if (!callout_capture) fprintf(outfile, "\n");
   }
 
@@ -6888,8 +6928,10 @@ if (callout_where)
     fprintf(outfile, " ");
 
   if (cb->next_item_length != 0)
-    fprintf(outfile, "%.*s", (int)(cb->next_item_length),
-      pbuffer8 + cb->pattern_position);
+    {
+    PCHARSV(CASTVAR(void *, pbuffer), cb->pattern_position,
+            (int)(cb->next_item_length), utf, outfile);
+    }
   else
     fprintf(outfile, "End of pattern");
 
@@ -7014,6 +7056,9 @@ for (;;)
 #ifdef SUPPORT_PCRE2_8
   if (test_mode == PCRE8_MODE) strcpy((char *)pbuffer8, (char *)nptr);
 #endif
+#if defined(EBCDIC) && !EBCDIC_IO
+  ascii_to_ebcdic_str(pbuffer8, namelen);
+#endif
 #ifdef SUPPORT_PCRE2_16
   if (test_mode == PCRE16_MODE)(void)to16(nptr, utf, &cnl);
 #endif
@@ -7094,6 +7139,9 @@ for (;;)
 
 #ifdef SUPPORT_PCRE2_8
   if (test_mode == PCRE8_MODE) strcpy((char *)pbuffer8, (char *)nptr);
+#endif
+#if defined(EBCDIC) && !EBCDIC_IO
+  ascii_to_ebcdic_str(pbuffer8, namelen);
 #endif
 #ifdef SUPPORT_PCRE2_16
   if (test_mode == PCRE16_MODE)(void)to16(nptr, utf, &cnl);
@@ -7425,9 +7473,17 @@ while ((c = *p++) != 0)
   else switch ((c = *p++))
     {
     case '\\': break;
-    case 'a': c = CHAR_BEL; break;
+    case 'a': c = '\a'; break;
     case 'b': c = '\b'; break;
+#if defined(EBCDIC) && !EBCDIC_IO
+    /* \e is the odd one out since it's not defined in the C standard,
+    precisely because of EBCDIC (apparently EBCDIC 'ESC' character isn't
+    an exact match to Latin-1 'ESC', hence '\e' isn't necessarily
+    supported by EBCDIC compilers). */
+    case 'e': c = '\x1b'; break;
+#else
     case 'e': c = CHAR_ESC; break;
+#endif
     case 'f': c = '\f'; break;
     case 'n': c = '\n'; break;
     case 'r': c = '\r'; break;
@@ -7514,6 +7570,7 @@ while ((c = *p++) != 0)
     break;
 
     case 'N':
+#ifndef EBCDIC
     if (memcmp(p, "{U+", 3) == 0 && isxdigit(p[3]))
       {
       char *endptr;
@@ -7530,6 +7587,7 @@ while ((c = *p++) != 0)
         break;
         }
       }
+#endif
     fprintf(outfile, "** Malformed \\N{U+ escape\n");
     return PR_OK;
 
@@ -7721,6 +7779,10 @@ c = code_unit_size * (((pat_patctl.control & CTL_POSIX) +
 pp = memmove(dbuffer + dbuffer_size - len - c, dbuffer, len + c);
 #ifdef SUPPORT_VALGRIND
   VALGRIND_MAKE_MEM_NOACCESS(dbuffer, dbuffer_size - (len + c));
+#endif
+
+#if defined(EBCDIC) && !EBCDIC_IO
+ascii_to_ebcdic_str(pp, len);
 #endif
 
 /* Now pp points to the subject string, but if null_subject was specified, set
@@ -8033,7 +8095,7 @@ if (dat_datctl.replacement[0] != 0)
   if (*pr == '[')
     {
     PCRE2_SIZE n = 0;
-    while ((c = *(++pr)) >= CHAR_0 && c <= CHAR_9) n = n * 10 + (c - CHAR_0);
+    while ((c = *(++pr)) >= '0' && c <= '9') n = n * 10 + (c - '0');
     if (*pr++ != ']')
       {
       fprintf(outfile, "Bad buffer size in replacement string\n");
@@ -8063,6 +8125,9 @@ if (dat_datctl.replacement[0] != 0)
     {
     while ((c = *pr++) != 0)
       {
+#if defined(EBCDIC) && !EBCDIC_IO
+      c = ascii_to_ebcdic(c);
+#endif
 #ifdef SUPPORT_PCRE2_8
       if (test_mode == PCRE8_MODE) *r8++ = c;
 #endif
@@ -8275,7 +8340,8 @@ for (gmatched = 0;; gmatched++)
     }
 
   /* Otherwise just run a single match, setting up a callout if required (the
-  default). There is a copy of the pattern in pbuffer8 for use by callouts. */
+  default). The pattern remains in pbuffer8/16/32 after compilation, for use
+  by callouts. */
 
   else
     {
@@ -8641,8 +8707,8 @@ for (gmatched = 0;; gmatched++)
     if ((nl == PCRE2_NEWLINE_CRLF || nl == PCRE2_NEWLINE_ANY ||
          nl == PCRE2_NEWLINE_ANYCRLF) &&
         start_offset < ulen - 1 &&
-        CODE_UNIT(pp, start_offset) == '\r' &&
-        CODE_UNIT(pp, end_offset) == '\n')
+        CODE_UNIT(pp, start_offset) == CHAR_CR &&
+        CODE_UNIT(pp, end_offset) == CHAR_LF)
       end_offset++;
 
     else if (utf && test_mode != PCRE32_MODE)
@@ -8920,8 +8986,10 @@ printf("  -C arg        show a specific compile-time option and exit with its\n"
 printf("                  value if numeric (else 0). The arg can be:\n");
 printf("     backslash-C    use of \\C is enabled [0, 1]\n");
 printf("     bsr            \\R type [ANYCRLF, ANY]\n");
-printf("     ebcdic         compiled for EBCDIC character code [0,1]\n");
+printf("     ebcdic         compiled for EBCDIC character code [0, 1]\n");
 printf("     ebcdic-nl      NL code if compiled for EBCDIC\n");
+printf("     ebcdic-io      if PCRE2 is compiled for EBCDIC, whether pcre2test's\n");
+printf("                      input and output is EBCDIC or ASCII [0, 1]\n");
 printf("     jit            just-in-time compiler supported [0, 1]\n");
 printf("     jitusable      test JIT usability [0, 1, 2, 3]\n");
 printf("     linksize       internal link size [2, 3, 4]\n");
@@ -8974,7 +9042,7 @@ uint32_t optval;
 unsigned int i = COPTLISTCOUNT;
 int yield = 0;
 
-if (arg != NULL && arg[0] != CHAR_MINUS)
+if (arg != NULL && arg[0] != '-')
   {
   for (i = 0; i < COPTLISTCOUNT; i++)
     if (strcmp(arg, coptlist[i].name) == 0) break;
@@ -9070,6 +9138,11 @@ printf("Compiled with\n");
 printf("  EBCDIC code support: LF is 0x%02x\n", CHAR_LF);
 #if defined NATIVE_ZOS
 printf("  EBCDIC code page %s or similar\n", pcrz_cpversion());
+#endif
+#if EBCDIC_IO
+printf("  Input/output for pcre2test is EBCDIC\n");
+#else
+printf("  Input/output for pcre2test is ASCII, not EBCDIC\n");
 #endif
 #endif
 
@@ -9821,7 +9894,7 @@ least 128 code units, because it is used for retrieving error messages. */
   for (;;)
     {
     errcode = strtol(arg_error, &endptr, 10);
-    if (*endptr != 0 && *endptr != CHAR_COMMA)
+    if (*endptr != 0 && *endptr != ',')
       {
       fprintf(stderr, "** \"%s\" is not a valid error number list\n", arg_error);
       yield = 1;
@@ -9848,7 +9921,15 @@ least 128 code units, because it is used for retrieving error messages. */
       }
     else
       {
-      PCHARSV(CASTVAR(void *, pbuffer), 0, len, FALSE, stdout);
+#ifdef SUPPORT_PCRE2_16
+      if (test_mode == PCRE16_MODE)
+        for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer16[i];
+#endif
+#ifdef SUPPORT_PCRE2_32
+      if (test_mode == PCRE32_MODE)
+        for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer32[i];
+#endif
+      printf("%s", pbuffer8);
       }
     printf("\n");
     if (*endptr == 0) goto EXIT;
@@ -10032,8 +10113,9 @@ while (notdone)
   /* We do not have a pattern set up for testing. Lines starting with # are
   either comments or special commands. Blank lines are ignored. Otherwise, the
   line must start with a valid delimiter. It is then processed as a pattern
-  line. A copy of the pattern is left in pbuffer8 for use by callouts. Under
-  valgrind, make the unused part of the buffer undefined, to catch overruns. */
+  line. The pattern remains in pbuffer8/16/32 after compilation, for use by
+  callouts. Under valgrind, make the unused part of the buffer undefined, to
+  catch overruns. */
 
   else if (*p == '#')
     {
