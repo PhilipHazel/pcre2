@@ -315,9 +315,11 @@ previous definition of PRIV avoids name clashes. */
 
 /* Forward-declarations for PRINTABLE(). */
 
+#if defined(EBCDIC) && !EBCDIC_IO
 static void ascii_to_ebcdic_str(uint8_t *buf, size_t len);
 static uint32_t ascii_to_ebcdic(uint32_t c);
 static uint32_t ebcdic_to_ascii(uint32_t c);
+#endif
 
 /* 32-bit integer values in the input are read by strtoul() or strtol(). The
 check needed for overflow depends on whether long ints are in fact longer than
@@ -4610,21 +4612,7 @@ if (len < 0)
 else
   {
   fprintf(outfile, "%s", before);
-
-  /* In the rare configuration of EBCDIC-with-ASCII-compiler, we currently
-  output ASCII strings for the error messages, so we do special filtering for
-  that here. */
-
-#ifdef SUPPORT_PCRE2_16
-  if (test_mode == PCRE16_MODE)
-    for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer16[i];
-#endif
-#ifdef SUPPORT_PCRE2_32
-  if (test_mode == PCRE32_MODE)
-    for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer32[i];
-#endif
-  fprintf(outfile, "%s", pbuffer8);
-
+  PCHARSV(CASTVAR(void *, pbuffer), 0, len, FALSE, outfile);
   fprintf(outfile, "%s", after);
   }
 return len >= 0;
@@ -9921,15 +9909,7 @@ least 128 code units, because it is used for retrieving error messages. */
       }
     else
       {
-#ifdef SUPPORT_PCRE2_16
-      if (test_mode == PCRE16_MODE)
-        for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer16[i];
-#endif
-#ifdef SUPPORT_PCRE2_32
-      if (test_mode == PCRE32_MODE)
-        for (int i = 0; i <= len; i++) pbuffer8[i] = (uint8_t)pbuffer32[i];
-#endif
-      printf("%s", pbuffer8);
+      PCHARSV(CASTVAR(void *, pbuffer), 0, len, FALSE, stdout);
       }
     printf("\n");
     if (*endptr == 0) goto EXIT;

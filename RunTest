@@ -130,7 +130,7 @@ fi
 # have a diff that lacks a -u option. Try to deal with this.
 
 cf="diff"
-diff -u /dev/null /dev/null 2>/dev/null && cf="diff -U15 --color=always" # XXX TEST HACK
+diff -u /dev/null /dev/null 2>/dev/null && cf="diff -u"
 
 # Find the test data
 
@@ -374,8 +374,14 @@ if [ $ebcdic -eq 1 ]; then
   # modified input file. That's it.
   filterebcdic()
     {
-    filter_cmd="$1"
     filter_args=
+    while [ "$1" != "$pcre2test" ] ; do
+      # Shift off any Valgrind args
+      filter_args="$filter_args $1"
+      shift
+    done
+    # Shift off the $pcre2test arg
+    filter_args="$filter_args $1"
     shift
     while [ $# -gt 0 ] ; do
       case "$1" in
@@ -393,9 +399,9 @@ if [ $ebcdic -eq 1 ]; then
     if [ $# -gt 0 ] ; then
       input="$1"
       shift
-      sed '/^# if !EBCDIC/,/^# endif/d' "$input" | "$filter_cmd" $filter_args "/dev/stdin" "$@"
+      sed '/^# if !EBCDIC/,/^# endif/d' "$input" | $filter_args "/dev/stdin" "$@"
     else
-      "$filter_cmd" $filter_args "$@"
+      $filter_args "$@"
     fi
     }
   sim="filterebcdic $sim"

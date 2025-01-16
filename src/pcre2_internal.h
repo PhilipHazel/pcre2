@@ -2268,6 +2268,8 @@ extern const uint8_t          PRIV(utf8_table4)[];
 #define _pcre2_utt                     PCRE2_SUFFIX(_pcre2_utt_)
 #define _pcre2_utt_names               PCRE2_SUFFIX(_pcre2_utt_names_)
 #define _pcre2_utt_size                PCRE2_SUFFIX(_pcre2_utt_size_)
+#define _pcre2_ebcdic_1047_to_ascii    PCRE2_SUFFIX(_pcre2_ebcdic_1047_to_ascii_)
+#define _pcre2_ascii_to_ebcdic_1047    PCRE2_SUFFIX(_pcre2_ascii_to_ebcdic_1047_)
 
 extern const uint8_t                   PRIV(OP_lengths)[];
 extern const uint32_t                  PRIV(callout_end_delims)[];
@@ -2300,6 +2302,8 @@ extern const char                     *PRIV(unicode_version);
 extern const ucp_type_table            PRIV(utt)[];
 extern const char                      PRIV(utt_names)[];
 extern const size_t                    PRIV(utt_size);
+extern const uint8_t                   PRIV(ebcdic_1047_to_ascii)[];
+extern const uint8_t                   PRIV(ascii_to_ebcdic_1047)[];
 
 /* Mode-dependent macros and hidden and private structures are defined in a
 separate file so that pcre2test can include them at all supported widths. When

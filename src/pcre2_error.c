@@ -58,15 +58,7 @@ performance issue because these strings are used only when there is an error.
 
 Each substring ends with \0 to insert a null character. This includes the final
 substring, so that the whole string ends with \0\0, which can be detected when
-counting through.
-
-In the rare configuration of EBCDIC-with-ASCII-compiler, we currently output
-ASCII strings for the error messages, which is unlikely to cause complaints if
-some client does want to use PCRE2 on Linux or Windows to process their EBCDIC
-files.
-
-XXX No! Let's just make it 100% EBCDIC.
-*/
+counting through. */
 
 static const unsigned char compile_error_texts[] =
   "no error\0"
@@ -330,7 +322,7 @@ pcre2_get_error_message(int enumber, PCRE2_UCHAR *buffer, PCRE2_SIZE size)
 {
 const unsigned char *message;
 PCRE2_SIZE i;
-int n;
+int n, rc = 0;
 
 if (size == 0) return PCRE2_ERROR_NOMEMORY;
 
@@ -360,14 +352,23 @@ for (i = 0; *message != 0; i++)
   {
   if (i >= size - 1)
     {
-    buffer[i] = 0;     /* Terminate partial message */
-    return PCRE2_ERROR_NOMEMORY;
+    rc = PCRE2_ERROR_NOMEMORY;
+    break;
     }
   buffer[i] = *message++;
   }
 
-buffer[i] = 0;
-return (int)i;
+#if defined EBCDIC && 'a' != 0x81
+/* If compiling for EBCDIC, but the compiler's string literals are not EBCDIC,
+then we are in the "force EBCDIC 1047" mode. I have chosen to add a few lines
+here to translate the error strings on the fly, rather than require the string
+literals above to be written out arduously using the "STR_XYZ" macros. */
+for (PCRE2_SIZE j = 0; j < i; ++j)
+  buffer[j] = PRIV(ascii_to_ebcdic_1047)[buffer[j]];
+#endif
+
+buffer[i] = 0;     /* Terminate message, even if truncated. */
+return rc? rc : (int)i;
 }
 
 /* End of pcre2_error.c */

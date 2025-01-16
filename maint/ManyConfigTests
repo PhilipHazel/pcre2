@@ -20,6 +20,7 @@
 # -nomainvalgrind skip the main (non-JIT) valgrind tests
 # -notmp          skip the tests in a temporary directory
 # -notmpjit       skip the JIT test in a temporary directory
+# -noebcdic       skip the EBCDIC tests
 # -novalgrind     skip all the valgrind tests
 
 # Alternatively, if any of those names are given with '+' instead of '-no',
@@ -38,6 +39,7 @@ usemain=1
 usemainvalgrind=1
 usetmp=1
 usetmpjit=1
+useebcdic=0 # XXX Set to 1 after fixed on all plats
 usevalgrind=1
 
 dummy=0
@@ -55,8 +57,9 @@ while [ $# -gt 0 ] ; do
           usemain=0
           usemainvalgrind=0
           usetmp=0
-          usetmpjit=0 
-          usevalgrind=0 
+          usetmpjit=0
+          useebcdic=0
+          usevalgrind=0
           seenplus=1
         fi;;
   esac
@@ -74,6 +77,7 @@ while [ $# -gt 0 ] ; do
     -nomainvalgrind) usemainvalgrind=0;;
     -notmp)          usetmp=0; usetmpjit=0;;
     -notmpjit)       usetmpjit=0;;
+    -noebcdic)       useebcdic=0;;
     -novalgrind)     usevalgrind=0;;
     +asan)           useasan=1;;
     +usan)           useusan=1;;
@@ -85,6 +89,7 @@ while [ $# -gt 0 ] ; do
     +mainvalgrind)   usemainvalgrind=1;;
     +tmp)            usetmp=1;;
     +tmpjit)         usetmpjit=1;;
+    +ebcdic)         useebcdic=1;;
     +valgrind)       usevalgrind=1; usejitvalgrind=1; usemainvalgrind=1;;
     *)               echo "Unknown option '$1'"; exit 1;;
   esac
@@ -221,7 +226,11 @@ runtest()
     exit 1
   fi
 
-  if [ $pcre2_8 -gt 0 ]; then
+  if [ "x$withebcdic" != x ]; then
+    echo "Skipping pcre2grep and pcre2posix tests: not supported on EBCDIC"
+  elif [ $pcre2_8 -eq 0 ]; then
+    echo "Skipping pcre2grep and pcre2posix tests: 8-bit library not compiled"
+  else
     echo "Running pcre2grep tests $withvalgrind"
     $srcdir/RunGrepTest $valgrind >teststdoutM 2>teststderrM
     if [ $? -ne 0 -o -s teststderrM ]; then
@@ -239,8 +248,6 @@ runtest()
       echo "**** Test failed ****"
       exit 1
     fi
-  else
-    echo "Skipping pcre2grep and pcre2posix tests: 8-bit library not compiled"
   fi
 
   if [ "$jit" -gt 0 ]; then
@@ -268,6 +275,7 @@ testtotal=`expr 17 \* $usemain + \
   1 \* $ISGCC \* $usemain \* $useasan + \
   1 \* $ISGCC \* $usemain \* $useusan + \
   13 \* $usejit + \
+  2 \* $useebcdic + \
   2 \* $usemainvalgrind + \
   2 \* $usejitvalgrind`
 
@@ -388,6 +396,22 @@ if [ $usejit -ne 0 ]; then
   done
 fi
 
+# Now run some tests with EBCDIC enabled
+
+if [ $useebcdic -ne 0 ]; then
+  echo "---------- EBCDIC tests in the current directory ----------"
+  withebcdic="with EBCDIC"
+
+  for opts in \
+    "--disable-unicode --enable-ebcdic --enable-ebcdic-ignoring-compiler" \
+    "--disable-unicode --enable-ebcdic --enable-ebcdic-ignoring-compiler --enable-ebcdic-nl25"
+  do
+    runtest
+  done
+fi
+
+withebcdic=
+
 # Now re-run some of the tests under valgrind.
 
 if [ $usevalgrind -ne 0 ]; then
@@ -464,8 +488,8 @@ if [ $usetmp -ne 0 -o $usetmpjit -ne 0 ]; then
     do
       runtest
     done
-  fi   
-  
+  fi
+
   if [ $usetmpjit -ne 0 ]; then
     echo "---------- JIT tests in the $tmp directory ----------"
     for opts in \
