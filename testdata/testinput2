@@ -2144,11 +2144,11 @@
 
 /\v*B/B
 
-# if !EBCDIC
+#if !ebcdic
 
 /\V+\x0a/B
 
-# endif
+#endif
 
 /A+\h/B
 
@@ -3137,11 +3137,11 @@
 \= Expect no match
     abc\=offset=3
 
-# if !EBCDIC
+#if !ebcdic
 
 /^\cģ/
 
-# endif
+#endif
 
 /(?P<abn>(?P=abn)xxx)/B
 
@@ -3421,7 +3421,7 @@
 
 /(a\1z)/B
 
-# if !EBCDIC
+#if !ebcdic
 
 /^a\x41z/alt_bsux,allow_empty_class,match_unset_backref,dupnames
     aAz
@@ -3460,7 +3460,7 @@
 /^\u{7a}/extra_alt_bsux
     zoo 
 
-# endif
+#endif
 
 /\u{}/extra_alt_bsux
     u{}
@@ -3931,14 +3931,14 @@
 
 /[a-[=xxx=]]+/
 
-# if !EBCDIC
+#if !ebcdic
 
 /[a-[!xxx!]]+/
 
 /[A-[!xxx!]]+/
     A]]]
 
-# endif
+#endif
 
 /[a-\d]+/
 
@@ -4340,12 +4340,12 @@
     ZabcZ\=replace=>${1:+ $<1 : no }
     ZabcZ\=replace=>${1:+ yes : $<1 }
 
-# if !EBCDIC
+#if !ebcdic
 
 /a(b)c/substitute_extended
     ZabcZ\=replace=>${1:+ \o{100} : \o{100} }
 
-# endif
+#endif
 
 /a(b)c/substitute_extended
     ZabcZ\=replace=>${
@@ -4777,7 +4777,7 @@ B)x/alt_verbnames,mark
     abcd\=null_context,find_limits
     abcd\=allusedtext,startchar
 
-# if !EBCDIC
+#if !ebcdic
 
 /abcd/replace=w\rx\x82y\o{333}z(\Q12\$34$$\x34\E5$$),substitute_extended
     abcd
@@ -4785,7 +4785,7 @@ B)x/alt_verbnames,mark
 /abcd/replace=w\rx\x82y\o{333}z(\Q12\$34$$\x34\E5$$),substitute_extended,substitute_literal
     >>abcd<<
 
-# endif
+#endif
     
 /abcd/g,replace=\$1$2\,substitute_literal
     XabcdYabcdZ
@@ -4852,7 +4852,7 @@ B)x/alt_verbnames,mark
 /abcd/g
     >abcd1234abcd5678<\=replace=wxyz,substitute_matched
 
-# if !EBCDIC
+#if !ebcdic
 
 /abc/substitute_extended,replace=>\045<
     abc
@@ -4863,7 +4863,7 @@ B)x/alt_verbnames,mark
 /abc/substitute_extended,replace=>\o{45}<
     abc
 
-# endif
+#endif
 
 /abc/substitute_extended,replace=>\845<
     abc
@@ -5002,11 +5002,11 @@ a)"xI
 /()\Q\E*]/B,auto_callout
     a[bc]d
 
-# if !EBCDIC
+#if !ebcdic
 
 /\x8a+f|;T?(*:;.'?`(\xeap ){![^()!y*''C*(?';]{1;(\x08)/B,alt_verbnames,dupnames,extended
 
-# endif
+#endif
 
 # Tests for NULL characters in comments and verb "names" and callouts
 
@@ -6193,7 +6193,7 @@ a)"xI
 
 "(?<=X(?(DEFINE)(.*))(?1))."
 
-# if !EBCDIC
+#if !ebcdic
 
 /\sxxx\s/tables=1
 \= Expect no match
@@ -6202,7 +6202,7 @@ a)"xI
 /\sxxx\s/tables=2
     AB\x{85}xxx\x{a0}XYZ
 
-# endif
+#endif
 
 /^\w+/tables=2
     École
@@ -6763,7 +6763,7 @@ a)"xI
 
 # python_octal
 
-# if !EBCDIC
+#if !ebcdic
 
 /\0-\00-\01-\012-\0123-\123-\1234/
     \x00-\x00-\x01-\o{12}-\o{12}3-\o{123}-\o{123}4
@@ -6790,7 +6790,7 @@ a)"xI
     abc\=replace=\1
     abc\=replace=\12
 
-# endif
+#endif
 
 # --------------
 
@@ -7364,11 +7364,11 @@ a)"xI
 
 /[\\z]/B
 
-# if !EBCDIC
+#if !ebcdic
 
 /[0-z]/B
 
-# endif
+#endif
 
 /[0\-z]/B
 
@@ -7376,7 +7376,7 @@ a)"xI
 
 /[ \]]/B
 
-# if !EBCDIC
+#if !ebcdic
 
 /[ --]/B
 
@@ -7384,7 +7384,7 @@ a)"xI
 
 /[A-\\]/B
 
-# endif
+#endif
 
 /[\A]/
 
@@ -7417,14 +7417,14 @@ a)"xI
 \= Expect no match
     \\
 
-# if !EBCDIC
+#if !ebcdic
 
 /[a\x{e1}]/iB
     a
     A
     \x{e1}
 
-# endif
+#endif
 
 # --------------
 
@@ -7495,7 +7495,7 @@ a)"xI
     XacY\=replace=[2]$1
     XacY\=substitute_overflow_length,replace=[2]$1
 
-# if !EBCDIC
+#if !ebcdic
 
 # a data character via an escape
 /abc/substitute_extended
@@ -7504,7 +7504,7 @@ a)"xI
     XabcY\=substitute_overflow_length,replace=[1]\x{48}
     XXabcY\=substitute_overflow_length,replace=[1]\x{48}
 
-# endif
+#endif
 
 # a replacement literal character
 /abc/
@@ -7568,7 +7568,7 @@ a)"xI
     XacY\=replace=[2]\U$1
     XacY\=substitute_overflow_length,replace=[2]\U$1
 
-# if !EBCDIC
+#if !ebcdic
 
 # a data character via an escape
 /abc/substitute_extended
@@ -7578,7 +7578,7 @@ a)"xI
     XXabcY\=substitute_overflow_length,replace=[1]\U\x{48}
     XabcY\=substitute_case_callout,replace=\U\x{48}
 
-# endif
+#endif
 
 # a replacement literal character
 /abc/substitute_extended

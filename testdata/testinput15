@@ -223,12 +223,12 @@
     aaa
     bbb
 
-# if !EBCDIC
+#if !ebcdic
 
 /[^\xff]((?1))/BI
     abcd
 
-# endif
+#endif
 
 # These tests don't behave the same with JIT
 

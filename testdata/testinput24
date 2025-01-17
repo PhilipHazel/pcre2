@@ -21,11 +21,11 @@
 
 "[ab/cd]"
 
-# if !EBCDIC
+#if !ebcdic
 
 "[,-/]"
 
-# endif
+#endif
 
 /[ab/
 
@@ -148,7 +148,7 @@
 \= Expect no match
     pic03.j/g
 
-# if !EBCDIC
+#if !ebcdic
 
 /A[+-0]B/
     A+B
@@ -157,7 +157,7 @@
 \= Expect no match
     A/B
 
-# endif
+#endif
 
 /*x?z/
     abc.xyz
@@ -169,7 +169,7 @@
 \= Expect no match
     .xyz
 
-# if !EBCDIC
+#if !ebcdic
 
 "[,-0]x?z"
     ,xyz
@@ -177,12 +177,12 @@
     /xyz
     .xyz
 
-# endif
+#endif
 
 ".x*"
     .xabc
 
-# if !EBCDIC
+#if !ebcdic
 
 /a[--0]z/
     a-z
@@ -192,7 +192,7 @@
     a/z
     a1z
 
-# endif
+#endif
 
 /<[a-c-d]>/
     <a>

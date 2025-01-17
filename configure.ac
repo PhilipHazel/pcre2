@@ -1169,7 +1169,7 @@ AC_CONFIG_COMMANDS([script-chmod], [chmod a+x pcre2-config])
 
 # Make sure that pcre2_chartables.c is removed in case the method for
 # creating it was changed by reconfiguration.
-AC_CONFIG_COMMANDS([delete-old-chartables], [rm -f pcre2_chartables.c])
+AC_CONFIG_COMMANDS([delete-old-chartables], [rm -f src/pcre2_chartables.c])
 
 # Handle --enable-Werror/errwarn. This must come last, so that we don't mess
 # with any of the library-detection tests (or similar).

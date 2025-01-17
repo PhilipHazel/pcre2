@@ -1622,10 +1622,10 @@ do
         SET_BIT(CHAR_SPACE);
 
         /* For the 16-bit and 32-bit libraries (which can never be EBCDIC), set
-        the bits for 0xA0 and for code units >= 255, independently of UTF. */
+        the bits for NBSP and for code units >= 255, independently of UTF. */
 
 #if PCRE2_CODE_UNIT_WIDTH != 8
-        SET_BIT(0xA0);
+        SET_BIT(CHAR_NBSP);
         SET_BIT(0xFF);
 #else
         /* For the 8-bit library in UTF-8 mode, set the bits for the first code

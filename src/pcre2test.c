@@ -242,7 +242,7 @@ to hold them as 32-bit code units. */
 
 /* Processing returns */
 
-enum { PR_OK, PR_SKIP, PR_ABEND };
+enum { PR_OK, PR_SKIP, PR_ABEND, PR_ENDIF };
 
 /* The macro EBCDIC_IO describes whether pcre2tests takes ASCII or EBCDIC as
 its input files (or terminal input). If the compiler uses ASCII for character
@@ -436,12 +436,14 @@ typedef struct cmdstruct {
   int  value;
 } cmdstruct;
 
-enum { CMD_FORBID_UTF, CMD_LOAD, CMD_LOADTABLES, CMD_NEWLINE_DEFAULT,
-  CMD_PATTERN, CMD_PERLTEST, CMD_POP, CMD_POPCOPY, CMD_SAVE, CMD_SUBJECT,
-  CMD_UNKNOWN };
+enum { CMD_ENDIF, CMD_FORBID_UTF, CMD_IF, CMD_LOAD, CMD_LOADTABLES,
+  CMD_NEWLINE_DEFAULT, CMD_PATTERN, CMD_PERLTEST, CMD_POP, CMD_POPCOPY,
+  CMD_SAVE, CMD_SUBJECT, CMD_UNKNOWN };
 
 static cmdstruct cmdlist[] = {
+  { "endif",           CMD_ENDIF },
   { "forbid_utf",      CMD_FORBID_UTF },
+  { "if",              CMD_IF },
   { "load",            CMD_LOAD },
   { "loadtables",      CMD_LOADTABLES },
   { "newline_default", CMD_NEWLINE_DEFAULT },
@@ -947,12 +949,12 @@ table itself easier to read. */
 #define SUPPORT_32 0
 #endif
 
-#ifdef EBCDIC
+#if defined EBCDIC
 #define SUPPORT_EBCDIC 1
-#define EBCDIC_NL CHAR_LF
+#define SUPPORT_EBCDIC_NL25 CHAR_LF == 0x25
 #else
 #define SUPPORT_EBCDIC 0
-#define EBCDIC_NL 0
+#define SUPPORT_EBCDIC_NL25 0
 #endif
 
 #ifdef NEVER_BACKSLASH_C
@@ -969,7 +971,6 @@ typedef struct coptstruct {
 
 enum { CONF_BSR,
        CONF_FIX,
-       CONF_FIZ,
        CONF_INT,
        CONF_NL,
        CONF_JU
@@ -979,8 +980,8 @@ static coptstruct coptlist[] = {
   { "backslash-C", CONF_FIX, BACKSLASH_C },
   { "bsr",         CONF_BSR, PCRE2_CONFIG_BSR },
   { "ebcdic",      CONF_FIX, SUPPORT_EBCDIC },
-  { "ebcdic-nl",   CONF_FIZ, EBCDIC_NL },
   { "ebcdic-io",   CONF_FIX, EBCDIC_IO },
+  { "ebcdic-nl25", CONF_FIX, SUPPORT_EBCDIC_NL25 },
   { "jit",         CONF_INT, PCRE2_CONFIG_JIT },
   { "jitusable",   CONF_JU,  0 },
   { "linksize",    CONF_INT, PCRE2_CONFIG_LINKSIZE },
@@ -997,7 +998,7 @@ static coptstruct coptlist[] = {
 #undef SUPPORT_16
 #undef SUPPORT_32
 #undef SUPPORT_EBCDIC
-#undef EBDCIC_NL
+#undef SUPPORT_EBDCIC_NL25
 #undef BACKSLASH_C
 
 /* Types for the parser, to be used in process_data() */
@@ -1021,6 +1022,8 @@ static BOOL first_callout;
 static BOOL jit_was_used;
 static BOOL restrict_for_perl_test = FALSE;
 static BOOL show_memory = FALSE;
+static BOOL preprocess_only = FALSE;
+static BOOL inside_if = FALSE;
 
 static int jitrc;                             /* Return from JIT compile */
 static int test_mode = DEFAULT_TEST_MODE;
@@ -5149,6 +5152,7 @@ uint16_t first_listed_newline;
 const char *cmdname;
 size_t cmdlen;
 uint8_t *argptr, *serial;
+BOOL if_inverted;
 
 yield = PR_OK;
 cmd = CMD_UNKNOWN;
@@ -5159,16 +5163,20 @@ for (i = 0; i < cmdlistcount; i++)
   cmdname = cmdlist[i].name;
   cmdlen = strlen(cmdname);
   if (strncmp((char *)(buffer+1), cmdname, cmdlen) == 0 &&
-      isspace(buffer[cmdlen+1]))
+      (buffer[cmdlen+1] == 0 || isspace(buffer[cmdlen+1])))
     {
     cmd = cmdlist[i].value;
     break;
     }
   }
 
+if (preprocess_only && cmd != CMD_IF && cmd != CMD_ENDIF)
+  return PR_OK;
+
 argptr = buffer + cmdlen + 1;
 
-if (restrict_for_perl_test && cmd != CMD_PATTERN && cmd != CMD_SUBJECT)
+if (restrict_for_perl_test && cmd != CMD_PATTERN && cmd != CMD_SUBJECT &&
+    cmd != CMD_IF && cmd != CMD_ENDIF)
   {
   fprintf(outfile, "** #%s is not allowed after #perltest\n", cmdname);
   return PR_ABEND;
@@ -5389,6 +5397,53 @@ switch(cmd)
     }
 
   fclose(f);
+  break;
+
+  case CMD_IF:
+  if (inside_if)
+    {
+    fprintf(outfile, "** Nested #if not supported\n");
+    return PR_ABEND;
+    }
+
+  while (isspace(*argptr)) argptr++;
+  if_inverted = FALSE;
+  if (*argptr == '!')
+    {
+    argptr++;
+    if_inverted = TRUE;
+    }
+  while (isspace(*argptr)) argptr++;
+  for (i = 0; i < COPTLISTCOUNT; i++)
+    {
+    size_t optlen = strlen(coptlist[i].name);
+    const char *argptr_trail;
+    if (coptlist[i].type != CONF_FIX) continue;
+    if (strncmp(argptr, coptlist[i].name, optlen) != 0) continue;
+    argptr_trail = argptr + optlen;
+    while (isspace(*argptr_trail)) argptr_trail++;
+    if (*argptr_trail == 0 || *argptr_trail == '\n') break;
+    }
+  if (i == COPTLISTCOUNT)
+    {
+    fprintf(outfile, "** Unknown condition: %s\n", buffer);
+    return PR_ABEND;
+    }
+
+  /* Condition FALSE - skip this line and everything until #endif. */
+  if ((coptlist[i].value != 0) == if_inverted)
+    yield = PR_ENDIF;
+
+  inside_if = TRUE;
+  break;
+
+  case CMD_ENDIF:
+  if (!inside_if)
+    {
+    fprintf(outfile, "** Unexpected #endif\n");
+    return PR_ABEND;
+    }
+  inside_if = FALSE;
   break;
   }
 
@@ -6164,9 +6219,8 @@ if (timeit > 0)
 PCRE2_COMPILE(compiled_code, use_pbuffer, patlen,
   pat_patctl.options|use_forbid_utf, &errorcode, &erroroffset, use_pat_context);
 
-/* If valgrind is supported, mark the pbuffer as accessible again. The 16-bit
-and 32-bit buffers can be marked completely undefined, but we must leave the
-pattern in the 8-bit buffer defined because it may be read from a callout
+/* If valgrind is supported, mark the pbuffer as accessible again. We leave the
+pattern in the test-mode's buffer defined because it may be read from a callout
 during matching. */
 
 #ifdef SUPPORT_VALGRIND
@@ -6176,15 +6230,29 @@ if (test_mode == PCRE8_MODE)
   VALGRIND_MAKE_MEM_UNDEFINED(pbuffer8 + valgrind_access_length,
     pbuffer8_size - valgrind_access_length);
   }
+else
+  {
+  VALGRIND_MAKE_MEM_UNDEFINED(pbuffer8, pbuffer8_size);
+  }
 #endif
 #ifdef SUPPORT_PCRE2_16
 if (test_mode == PCRE16_MODE)
+  {
+  VALGRIND_MAKE_MEM_UNDEFINED(pbuffer16 + valgrind_access_length,
+    pbuffer16_size - valgrind_access_length*sizeof(uint16_t));
+  }
+else
   {
   VALGRIND_MAKE_MEM_UNDEFINED(pbuffer16, pbuffer16_size);
   }
 #endif
 #ifdef SUPPORT_PCRE2_32
 if (test_mode == PCRE32_MODE)
+  {
+  VALGRIND_MAKE_MEM_UNDEFINED(pbuffer32 + valgrind_access_length,
+    pbuffer32_size - valgrind_access_length*sizeof(uint32_t));
+  }
+else
   {
   VALGRIND_MAKE_MEM_UNDEFINED(pbuffer32, pbuffer32_size);
   }
@@ -8975,9 +9043,9 @@ printf("                  value if numeric (else 0). The arg can be:\n");
 printf("     backslash-C    use of \\C is enabled [0, 1]\n");
 printf("     bsr            \\R type [ANYCRLF, ANY]\n");
 printf("     ebcdic         compiled for EBCDIC character code [0, 1]\n");
-printf("     ebcdic-nl      NL code if compiled for EBCDIC\n");
-printf("     ebcdic-io      if PCRE2 is compiled for EBCDIC, whether pcre2test's\n");
-printf("                      input and output is EBCDIC or ASCII [0, 1]\n");
+printf("     ebcdic-io      if compiled for EBCDIC, whether pcre2test's input\n");
+printf("                      and output is EBCDIC or ASCII [0, 1]\n");
+printf("     ebcdic-nl25    if compiled for EBCDIC, whether NL is 0x25 [0, 1]\n");
 printf("     jit            just-in-time compiler supported [0, 1]\n");
 printf("     jitusable      test JIT usability [0, 1, 2, 3]\n");
 printf("     linksize       internal link size [2, 3, 4]\n");
@@ -8988,6 +9056,7 @@ printf("     pcre2-32       32 bit library support enabled [0, 1]\n");
 printf("     unicode        Unicode and UTF support enabled [0, 1]\n");
 printf("  -d            set default pattern modifier 'debug'\n");
 printf("  -dfa          set default subject modifier 'dfa'\n");
+printf("  -E            preprocess input only (#if ... #endif)\n");
 printf("  -error <n,m,..>  show messages for error numbers, then exit\n");
 printf("  -help         show usage information\n");
 printf("  -i            set default pattern modifier 'info'\n");
@@ -9051,11 +9120,6 @@ if (arg != NULL && arg[0] != '-')
     case CONF_FIX:
     yield = coptlist[i].value;
     printf("%d\n", yield);
-    break;
-
-    case CONF_FIZ:
-    optval = coptlist[i].value;
-    printf("%d\n", optval);
     break;
 
     case CONF_INT:
@@ -9507,6 +9571,7 @@ BOOL notdone = TRUE;
 BOOL quiet = FALSE;
 BOOL showtotaltimes = FALSE;
 BOOL skipping = FALSE;
+BOOL skipping_endif = FALSE;
 char *arg_subject = NULL;
 char *arg_pattern = NULL;
 char *arg_error = NULL;
@@ -9675,6 +9740,10 @@ while (argc > 1 && argv[op][0] == '-' && argv[op][1] != 0)
     exit(1);
 #endif
     }
+
+  /* Set preprocess-only (only handle #if ... #endif) */
+
+  else if (strcmp(arg, "-E") == 0) preprocess_only = TRUE;
 
   /* Set quiet (no version verification) */
 
@@ -10052,9 +10121,24 @@ while (notdone)
 
   if (extend_inputline(infile, buffer, expectdata? "data> " : "  re> ") == NULL)
     break;
+
+  /* Pre-process input lines with #if...#endif. */
+
+  if (skipping_endif)
+    {
+    if (strncmp(buffer, "#endif", 6) != 0 ||
+        !(buffer[6] == 0 || isspace(buffer[6])))
+      continue;
+    skipping_endif = FALSE;
+    }
+
+  /* Begin processing the line. */
+
   if (!INTERACTIVE(infile)) fprintf(outfile, "%s", (char *)buffer);
   fflush(outfile);
   p = buffer;
+
+  if (preprocess_only && *p != '#') continue;
 
   /* If we have a pattern set up for testing, or we are skipping after a
   compile failure, a blank line terminates this test. */
@@ -10121,6 +10205,7 @@ while (notdone)
     }
 
   if (rc == PR_SKIP && !INTERACTIVE(infile)) skipping = TRUE;
+  else if (rc == PR_ENDIF) skipping_endif = TRUE;
   else if (rc == PR_ABEND)
     {
     fprintf(outfile, "** pcre2test run abandoned\n");
@@ -10130,6 +10215,13 @@ while (notdone)
   }
 
 /* Finish off a normal run. */
+
+if (skipping_endif)
+  {
+  fprintf(outfile, "** Expected #endif\n");
+  yield = 1;
+  goto EXIT;
+  }
 
 if (INTERACTIVE(infile)) fprintf(outfile, "\n");
 

@@ -31,13 +31,13 @@ No match
     What do you know about THE QUICK BROWN FOX?
  0: THE QUICK BROWN FOX
 
-# if !EBCDIC
+#if !ebcdic
 
 /abcd\t\n\r\f\a\e\071\x3b\$\\\?caxyz/
     abcd\t\n\r\f\a\e9;\$\\?caxyz
  0: abcd\x09\x0a\x0d\x0c\x07\x1b9;$\?caxyz
 
-# endif
+#endif
 
 /a*abc?xyz+pqr{3}ab{2,}xy{4,5}pq{0,6}AB{0,}zz/
     abxyzpqrrrabbxyyyypqAzz
@@ -207,13 +207,13 @@ No match
     babababc
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /^\ca\cA\c[;\c:/
     \x01\x01\e;z
  0: \x01\x01\x1b;z
 
-# endif
+#endif
 
 /^[ab\]cde]/
     athing
@@ -907,7 +907,7 @@ No match
  0: aabb
  1: b
 
-# if !EBCDIC
+#if !ebcdic
 
 /  (?: [\040\t] |  \(
 (?:  [^\\\x80-\xff\n\015()]  |  \\ [^\x80-\xff]  |  \( (?:  [^\\\x80-\xff\n\015()]  |  \\ [^\x80-\xff]  )* \)  )*
@@ -1721,7 +1721,7 @@ No match
     The quick brown fox
 No match
 
-# endif
+#endif
 
 /abc\0def\00pqr\000xyz\0000AB/
     abc\0def\00pqr\000xyz\0000AB
@@ -1900,7 +1900,7 @@ No match
  2: title
  3: Blah blah blah
 
-# if !EBCDIC
+#if !ebcdic
 
 /^[W-c]+$/
     WXY_^abc
@@ -1921,7 +1921,7 @@ No match
     wxy_^ABC
  0: wxy_^ABC
 
-# endif
+#endif
 
 /^abc$/m
     abc
@@ -2005,7 +2005,7 @@ No match
     aaa
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /\x5c/
     \\
@@ -2018,7 +2018,7 @@ No match
     Zulu
 No match
 
-# endif
+#endif
 
 /(abc)\1/i
     abcabc
@@ -2040,7 +2040,7 @@ No match
     abc\ndef
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /(abc)\123/
     abc\x53
@@ -2085,7 +2085,7 @@ No match
  0: abc@0
  1: abc
 
-# endif
+#endif
     
 /^(A)(B)(C)(D)(E)(F)(G)(H)(I)\8\9$/
     ABCDEFGHIHI 
@@ -2107,7 +2107,7 @@ No match
     A8B9C\x00
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)\12\123/
     abcdefghijkllS
@@ -2140,7 +2140,7 @@ No match
 10: j
 11: k
 
-# endif
+#endif
 
 /a{0}bc/
     bc
@@ -2150,13 +2150,13 @@ No match
     xyz
  0: xyz
 
-# if !EBCDIC
+#if !ebcdic
 
 /abc[\10]de/
     abc\010de
  0: abc\x08de
 
-# endif
+#endif
 
 /abc[\1]de/
     abc\1de
@@ -2292,13 +2292,13 @@ No match
     aaAabcd 
  0: b
 
-# if !EBCDIC
+#if !ebcdic
 
 /\000\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037\040\041\042\043\044\045\046\047\050\051\052\053\054\055\056\057\060\061\062\063\064\065\066\067\070\071\072\073\074\075\076\077\100\101\102\103\104\105\106\107\110\111\112\113\114\115\116\117\120\121\122\123\124\125\126\127\130\131\132\133\134\135\136\137\140\141\142\143\144\145\146\147\150\151\152\153\154\155\156\157\160\161\162\163\164\165\166\167\170\171\172\173\174\175\176\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377/
  \000\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037\040\041\042\043\044\045\046\047\050\051\052\053\054\055\056\057\060\061\062\063\064\065\066\067\070\071\072\073\074\075\076\077\100\101\102\103\104\105\106\107\110\111\112\113\114\115\116\117\120\121\122\123\124\125\126\127\130\131\132\133\134\135\136\137\140\141\142\143\144\145\146\147\150\151\152\153\154\155\156\157\160\161\162\163\164\165\166\167\170\171\172\173\174\175\176\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377
  0: \x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff
 
-# endif
+#endif
 
 /P[^*]TAIRE[^*]{1,6}?LL/
     xxxxxxxxxxxPSTAIREISLLxxxxxxxxx
@@ -2429,7 +2429,7 @@ No match
     ]abcd[
 No match
 
-# if !EBCDIC
+#if !ebcdic
        
 /^[W-\]46]/
     W46]789 
@@ -2454,7 +2454,7 @@ No match
     well
 No match
 
-# endif
+#endif
     
 /\d\d\/\d\d\/\d\d\d\d/
     01/01/2000
@@ -5993,7 +5993,6 @@ No match
 \= Expect no match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 
 No match
-
     
 /(?i)reg(?:ul(?:[a‰]|ae)r|ex)/
     REGular
@@ -6005,7 +6004,7 @@ No match
     regul‰r 
  0: regul\xe4r
 
-# if !EBCDIC
+#if !ebcdic
 
 /≈ÊÂ‰[‡-ˇ¿-ﬂ]+/
     ≈ÊÂ‰‡
@@ -6017,7 +6016,7 @@ No match
     ≈ÊÂ‰ﬂ
  0: \xc5\xe6\xe5\xe4\xdf
 
-# endif
+#endif
 
 /(?<=Z)X./
   \x84XAZXB
@@ -6817,7 +6816,7 @@ No match
     >  X NY Z
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /\v*X\v?Y\v+Z\V*\x0a\V+\x0b\V{2,3}\x0c/
     >XY\x0aZ\x0aA\x0bNN\x0c
@@ -6825,7 +6824,7 @@ No match
     >\x0a\x0dX\x0aY\x0a\x0bZZZ\x0aAAA\x0bNNN\x0c
  0: \x0a\x0dX\x0aY\x0a\x0bZZZ\x0aAAA\x0bNNN\x0c
 
-# endif
+#endif
 
 /(foo)\Kbar/
     foobar
@@ -8982,7 +8981,7 @@ No match
  2: B
  3: A
 
-# if !EBCDIC
+#if !ebcdic
 
 /^A\xBz/
     A\x{0B}z
@@ -9000,7 +8999,7 @@ No match
     A\123B
  0: ASB
 
-# endif
+#endif
 
 / ^ a + + b $ /x
     aaaab
@@ -9216,7 +9215,7 @@ No match
     A8B9C
  0: A8B9C
 
-# if !EBCDIC
+#if !ebcdic
 
 /(?1)()((((((\1++))\x85)+)|))/
     \x85\x85
@@ -9229,7 +9228,7 @@ No match
  6: 
  7: 
 
-# endif
+#endif
 
 /(?|(\k'Pm')|(?'Pm'))/
     abcd
@@ -9508,7 +9507,7 @@ No match
  0: a123a
  1: a
 
-# if !EBCDIC
+#if !ebcdic
 
 # This pattern uses a lot of named subpatterns in order to match email
 # addresses in various formats. It's a heavy test for named subpatterns. In the
@@ -9580,11 +9579,11 @@ No match
     The quick brown fox
 No match
 
-# endif
+#endif
     
 # -------------------------------------------------------------------------- 
 
-# if !EBCDIC
+#if !ebcdic
 
 # This pattern uses named groups to match default PCRE2 patterns. It's another
 # heavy test for named subpatterns. Once again, code slash as \x{2f} and escape 
@@ -9780,7 +9779,7 @@ No match
     /(?P<abn>(?P=abn)(?<badstufxxx)/
 No match
 
-# endif
+#endif
 
 # -------------------------------------------------------------------------- 
 
@@ -10234,7 +10233,7 @@ No match
     a{1,2,3}b
  0: a{1,2,3}b
 
-# if !EBCDIC
+#if !ebcdic
 
 /\214748364/
     >\x{8c}748364<
@@ -10255,7 +10254,7 @@ No match
     \x8b00000000
  0: \x8b00000000
 
-# endif
+#endif
 
 /a{65536/
     >a{65536<
@@ -10693,7 +10692,7 @@ No match
     n
 No match
 
-# if !EBCDIC
+#if !ebcdic
 
 /^(?[\x61])b/
     ab
@@ -10713,7 +10712,7 @@ No match
     b
 No match
 
-# endif
+#endif
 
 /(?[ [[:graph:]] ])/
     a
