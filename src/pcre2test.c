@@ -5417,12 +5417,15 @@ switch(cmd)
   for (i = 0; i < COPTLISTCOUNT; i++)
     {
     size_t optlen = strlen(coptlist[i].name);
-    const char *argptr_trail;
-    if (coptlist[i].type != CONF_FIX) continue;
-    if (strncmp(argptr, coptlist[i].name, optlen) != 0) continue;
+    const uint8_t *argptr_trail;
+    if (coptlist[i].type != CONF_FIX)
+      continue;
+    if (strncmp((const char*)argptr, coptlist[i].name, optlen) != 0)
+      continue;
     argptr_trail = argptr + optlen;
     while (isspace(*argptr_trail)) argptr_trail++;
-    if (*argptr_trail == 0 || *argptr_trail == '\n') break;
+    if (*argptr_trail == 0 || *argptr_trail == '\n')
+      break;
     }
   if (i == COPTLISTCOUNT)
     {
@@ -10126,7 +10129,7 @@ while (notdone)
 
   if (skipping_endif)
     {
-    if (strncmp(buffer, "#endif", 6) != 0 ||
+    if (strncmp((char*)buffer, "#endif", 6) != 0 ||
         !(buffer[6] == 0 || isspace(buffer[6])))
       continue;
     skipping_endif = FALSE;
