@@ -132,10 +132,6 @@ COMMAND LINE OPTIONS
                  as  RunTest.  The  following options output the value and set
                  the exit code as indicated:
 
-                   ebcdic-nl  the code for LF (= NL) in an EBCDIC environment:
-                                either 0x15 or 0x25
-                                0 if used in an ASCII/Unicode environment
-                                exit code is always 0
                    linksize   the configured internal link size (2, 3, or 4)
                                 exit code is set to the link size
                    newline    the default newline setting:
@@ -153,6 +149,9 @@ COMMAND LINE OPTIONS
                    ebcdic-io     if  PCRE2  is  compiled  for  EBCDIC, whether
                  pcre2test's input and
                                   output is EBCDIC or ASCII
+                   ebcdic-nl25  if PCRE2 is compiled for EBCDIC, whether NL (=
+                 LF) is 0x25
+                                  (otherwise it is 0x15, the default)
                    jit          just-in-time support is available
                    pcre2-16     the 16-bit library was built
                    pcre2-32     the 32-bit library was built
@@ -181,45 +180,49 @@ COMMAND LINE OPTIONS
                  is  done  using the pcre2_dfa_match() function instead of the
                  default pcre2_match().
 
+       -E        Run in "preprocess only" mode (similar to "gcc -E"). The "#if
+                 ... #endif" commands are processed, and all other  lines  are
+                 printed verbatim.
+
        -error number[,number,...]
-                 Call pcre2_get_error_message() for each of the error  numbers
-                 in  the  comma-separated list, display the resulting messages
-                 on the standard output, then exit with zero  exit  code.  The
-                 numbers  may  be  positive or negative. This is a convenience
+                 Call  pcre2_get_error_message() for each of the error numbers
+                 in the comma-separated list, display the  resulting  messages
+                 on  the  standard  output, then exit with zero exit code. The
+                 numbers may be positive or negative. This  is  a  convenience
                  facility for PCRE2 maintainers.
 
        -help     Output a brief summary these options and then exit.
 
-       -i        Behave as if each pattern has the info modifier;  information
+       -i        Behave  as if each pattern has the info modifier; information
                  about the compiled pattern is given after compilation.
 
-       -jit      Behave  as  if  each pattern line has the jit modifier; after
-                 successful compilation, each pattern is passed to  the  just-
+       -jit      Behave as if each pattern line has the  jit  modifier;  after
+                 successful  compilation,  each pattern is passed to the just-
                  in-time compiler, if available.
 
-       -jitfast  Behave  as if each pattern line has the jitfast modifier; af-
-                 ter successful compilation, each pattern  is  passed  to  the
+       -jitfast  Behave as if each pattern line has the jitfast modifier;  af-
+                 ter  successful  compilation,  each  pattern is passed to the
                  just-in-time compiler, if available, and each subject line is
                  passed directly to the JIT matcher via its "fast path".
 
        -jitverify
-                 Behave  as  if  each pattern line has the jitverify modifier;
-                 after successful compilation, each pattern is passed  to  the
-                 just-in-time  compiler,  if available, and the use of JIT for
+                 Behave as if each pattern line has  the  jitverify  modifier;
+                 after  successful  compilation, each pattern is passed to the
+                 just-in-time compiler, if available, and the use of  JIT  for
                  matching is verified.
 
        -LM       List modifiers: write a list of available pattern and subject
-                 modifiers to the standard output, then exit  with  zero  exit
-                 code.  All other options are ignored.  If both -C and any -Lx
+                 modifiers  to  the  standard output, then exit with zero exit
+                 code. All other options are ignored.  If both -C and any  -Lx
                  options are present, whichever is first is recognized.
 
-       -LP       List properties: write a list of recognized  Unicode  proper-
-                 ties  to  the standard output, then exit with zero exit code.
+       -LP       List  properties:  write a list of recognized Unicode proper-
+                 ties to the standard output, then exit with zero  exit  code.
                  All other options are ignored. If both -C and any -Lx options
                  are present, whichever is first is recognized.
 
        -LS       List scripts: write a list of recognized Unicode script names
-                 to the standard output, then exit with zero  exit  code.  All
+                 to  the  standard  output, then exit with zero exit code. All
                  other options are ignored. If both -C and any -Lx options are
                  present, whichever is first is recognized.
 
@@ -229,25 +232,25 @@ COMMAND LINE OPTIONS
        -q        Do not output the version number of pcre2test at the start of
                  execution.
 
-       -S size   On  Unix-like  systems, set the size of the run-time stack to
+       -S size   On Unix-like systems, set the size of the run-time  stack  to
                  size mebibytes (units of 1024*1024 bytes).
 
        -subject modifier-list
                  Behave as if each subject line contains the given modifiers.
 
-       -t        Run each compile and match many times with a timer, and  out-
-                 put  the  resulting  times  per compile or match. When JIT is
-                 used, separate times are given for the  initial  compile  and
-                 the  JIT  compile.  You  can control the number of iterations
-                 that are used for timing by following -t with a number (as  a
-                 separate  item  on  the command line). For example, "-t 1000"
+       -t        Run  each compile and match many times with a timer, and out-
+                 put the resulting times per compile or  match.  When  JIT  is
+                 used,  separate  times  are given for the initial compile and
+                 the JIT compile. You can control  the  number  of  iterations
+                 that  are used for timing by following -t with a number (as a
+                 separate item on the command line). For  example,  "-t  1000"
                  iterates 1000 times. The default is to iterate 500,000 times.
 
        -tm       This is like -t except that it times only the matching phase,
                  not the compile phase.
 
-       -T -TM    These behave like -t and -tm, but in addition, at the end  of
-                 a  run, the total times for all compiles and matches are out-
+       -T -TM    These  behave like -t and -tm, but in addition, at the end of
+                 a run, the total times for all compiles and matches are  out-
                  put.
 
        -version  Output the PCRE2 version number and then exit.
@@ -255,154 +258,166 @@ COMMAND LINE OPTIONS
 
 DESCRIPTION
 
-       If pcre2test is given two filename arguments, it reads from  the  first
+       If  pcre2test  is given two filename arguments, it reads from the first
        and writes to the second. If the first name is "-", input is taken from
-       the  standard  input. If pcre2test is given only one argument, it reads
+       the standard input. If pcre2test is given only one argument,  it  reads
        from that file and writes to stdout. Otherwise, it reads from stdin and
        writes to stdout.
 
-       When pcre2test is built, a configuration option  can  specify  that  it
-       should  be linked with the libreadline or libedit library. When this is
-       done, if the input is from a terminal, it is read using the  readline()
+       When  pcre2test  is  built,  a configuration option can specify that it
+       should be linked with the libreadline or libedit library. When this  is
+       done,  if the input is from a terminal, it is read using the readline()
        function. This provides line-editing and history facilities. The output
        from the -help option states whether or not readline() will be used.
 
-       The  program  handles  any number of tests, each of which consists of a
-       set of input lines. Each set starts with a regular expression  pattern,
+       The program handles any number of tests, each of which  consists  of  a
+       set  of input lines. Each set starts with a regular expression pattern,
        followed by any number of subject lines to be matched against that pat-
        tern. In between sets of test data, command lines that begin with # may
        appear. This file format, with some restrictions, can also be processed
-       by  the perltest.sh script that is distributed with PCRE2 as a means of
+       by the perltest.sh script that is distributed with PCRE2 as a means  of
        checking that the behaviour of PCRE2 and Perl is the same. For a speci-
-       fication of perltest.sh, see the comments near its beginning. See  also
+       fication  of perltest.sh, see the comments near its beginning. See also
        the #perltest command below.
 
        When the input is a terminal, pcre2test prompts for each line of input,
-       using  "re>"  to prompt for regular expression patterns, and "data>" to
-       prompt for subject lines. Command lines starting with # can be  entered
+       using "re>" to prompt for regular expression patterns, and  "data>"  to
+       prompt  for subject lines. Command lines starting with # can be entered
        only in response to the "re>" prompt.
 
-       Each  subject line is matched separately and independently. If you want
+       Each subject line is matched separately and independently. If you  want
        to do multi-line matches, you have to use the \n escape sequence (or \r
-       or \r\n, etc., depending on the newline setting) in a  single  line  of
-       input  to encode the newline sequences. There is no limit on the length
-       of subject lines; the input buffer is automatically extended if  it  is
-       too  small.  There  are  replication features that makes it possible to
-       generate long repetitive pattern or subject  lines  without  having  to
+       or  \r\n,  etc.,  depending on the newline setting) in a single line of
+       input to encode the newline sequences. There is no limit on the  length
+       of  subject  lines; the input buffer is automatically extended if it is
+       too small. There are replication features that  makes  it  possible  to
+       generate  long  repetitive  pattern  or subject lines without having to
        supply them explicitly.
 
-       An  empty  line  or  the end of the file signals the end of the subject
-       lines for a test, at which point a new pattern or command line  is  ex-
+       An empty line or the end of the file signals the  end  of  the  subject
+       lines  for  a test, at which point a new pattern or command line is ex-
        pected if there is still input to be read.
 
 
 COMMAND LINES
 
-       In  between sets of test data, a line that begins with # is interpreted
+       In between sets of test data, a line that begins with # is  interpreted
        as a command line. If the first character is followed by white space or
-       an exclamation mark, the line is treated as  a  comment,  and  ignored.
+       an  exclamation  mark,  the  line is treated as a comment, and ignored.
        Otherwise, the following commands are recognized:
 
          #forbid_utf
 
-       Subsequent   patterns   automatically   have  the  PCRE2_NEVER_UTF  and
-       PCRE2_NEVER_UCP options set, which locks out the use of  the  PCRE2_UTF
-       and  PCRE2_UCP options and the use of (*UTF) and (*UCP) at the start of
-       patterns. This command also forces an error  if  a  subsequent  pattern
-       contains  any  occurrences  of \P, \p, or \X, which are still supported
-       when PCRE2_UTF is not set, but which require Unicode  property  support
+       Subsequent  patterns  automatically  have   the   PCRE2_NEVER_UTF   and
+       PCRE2_NEVER_UCP  options  set, which locks out the use of the PCRE2_UTF
+       and PCRE2_UCP options and the use of (*UTF) and (*UCP) at the start  of
+       patterns.  This  command  also  forces an error if a subsequent pattern
+       contains any occurrences of \P, \p, or \X, which  are  still  supported
+       when  PCRE2_UTF  is not set, but which require Unicode property support
        to be included in the library.
 
-       This  is  a trigger guard that is used in test files to ensure that UTF
-       or Unicode property tests are not accidentally added to files that  are
-       used  when  Unicode  support  is  not  included in the library. Setting
-       PCRE2_NEVER_UTF and PCRE2_NEVER_UCP as a default can also  be  obtained
-       by  the  use  of #pattern; the difference is that #forbid_utf cannot be
-       unset, and the automatic options are not displayed in pattern  informa-
+       This is a trigger guard that is used in test files to ensure  that  UTF
+       or  Unicode property tests are not accidentally added to files that are
+       used when Unicode support is  not  included  in  the  library.  Setting
+       PCRE2_NEVER_UTF  and  PCRE2_NEVER_UCP as a default can also be obtained
+       by the use of #pattern; the difference is that  #forbid_utf  cannot  be
+       unset,  and the automatic options are not displayed in pattern informa-
        tion, to avoid cluttering up test output.
 
          #load <filename>
 
        This command is used to load a set of precompiled patterns from a file,
-       as  described  in  the  section entitled "Saving and restoring compiled
+       as described in the section entitled  "Saving  and  restoring  compiled
        patterns" below.
 
          #loadtables <filename>
 
-       This command is used to load a set of binary character tables that  can
-       be  accessed  by  the tables=3 qualifier. Such tables can be created by
+       This  command is used to load a set of binary character tables that can
+       be accessed by the tables=3 qualifier. Such tables can  be  created  by
        the pcre2_dftables program with the -b option.
 
          #newline_default [<newline-list>]
 
-       When PCRE2 is built, a default newline  convention  can  be  specified.
-       This  determines which characters and/or character pairs are recognized
+       When  PCRE2  is  built,  a default newline convention can be specified.
+       This determines which characters and/or character pairs are  recognized
        as indicating a newline in a pattern or subject string. The default can
-       be overridden when a pattern is compiled. The standard test files  con-
-       tain  tests  of  various  newline  conventions, but the majority of the
-       tests expect a single linefeed to be recognized as  a  newline  by  de-
-       fault.  Without  special action the tests would fail when PCRE2 is com-
+       be  overridden when a pattern is compiled. The standard test files con-
+       tain tests of various newline conventions,  but  the  majority  of  the
+       tests  expect  a  single  linefeed to be recognized as a newline by de-
+       fault. Without special action the tests would fail when PCRE2  is  com-
        piled with either CR or CRLF as the default newline.
 
        The #newline_default command specifies a list of newline types that are
-       acceptable as the default. The types must be one of CR, LF, CRLF,  ANY-
+       acceptable  as the default. The types must be one of CR, LF, CRLF, ANY-
        CRLF, ANY, or NUL (in upper or lower case), for example:
 
          #newline_default LF Any anyCRLF
 
        If the default newline is in the list, this command has no effect. Oth-
-       erwise,  except  when  testing  the  POSIX API, a newline modifier that
+       erwise, except when testing the POSIX  API,  a  newline  modifier  that
        specifies the first newline convention in the list (LF in the above ex-
-       ample) is added to any pattern that does not  already  have  a  newline
+       ample)  is  added  to  any pattern that does not already have a newline
        modifier. If the newline list is empty, the feature is turned off. This
        command is present in a number of the standard test input files.
 
-       When  the POSIX API is being tested there is no way to override the de-
+       When the POSIX API is being tested there is no way to override the  de-
        fault newline convention, though it is possible to set the newline con-
-       vention from within the pattern. A warning is given  if  the  posix  or
-       posix_nosub  modifier is used when #newline_default would set a default
+       vention  from  within  the  pattern. A warning is given if the posix or
+       posix_nosub modifier is used when #newline_default would set a  default
        for the non-POSIX API.
 
          #pattern <modifier-list>
 
-       This command sets a default modifier list that applies  to  all  subse-
+       This  command  sets  a default modifier list that applies to all subse-
        quent patterns. Modifiers on a pattern can change these settings.
 
          #perltest
 
-       This  line  is  used  in test files that can also be processed by perl-
-       test.sh to confirm that Perl gives the same results  as  PCRE2.  Subse-
-       quent  tests are checked for the use of pcre2test features that are in-
+       This line is used in test files that can also  be  processed  by  perl-
+       test.sh  to  confirm  that Perl gives the same results as PCRE2. Subse-
+       quent tests are checked for the use of pcre2test features that are  in-
        compatible with the perltest.sh script.
 
-       Patterns must use '/' as their delimiter, and  only  certain  modifiers
-       are  supported. Comment lines, #pattern commands, and #subject commands
-       that set or unset "mark" are recognized and acted  on.  The  #perltest,
-       #forbid_utf,  and  #newline_default  commands,  which are needed in the
+       Patterns  must  use  '/' as their delimiter, and only certain modifiers
+       are supported. Comment lines, #pattern commands, and #subject  commands
+       that  set  or  unset "mark" are recognized and acted on. The #perltest,
+       #forbid_utf, and #newline_default commands, which  are  needed  in  the
        relevant pcre2test files, are silently ignored. All other command lines
-       are ignored, but give a warning message. The  #perltest  command  helps
-       detect  tests  that  are  accidentally put in the wrong file or use the
-       wrong delimiter. For more details of the  perltest.sh  script  see  the
+       are  ignored,  but  give a warning message. The #perltest command helps
+       detect tests that are accidentally put in the wrong  file  or  use  the
+       wrong  delimiter.  For  more  details of the perltest.sh script see the
        comments it contains.
 
          #pop [<modifiers>]
          #popcopy [<modifiers>]
 
-       These  commands  are used to manipulate the stack of compiled patterns,
-       as described in the section entitled  "Saving  and  restoring  compiled
+       These commands are used to manipulate the stack of  compiled  patterns,
+       as  described  in  the  section entitled "Saving and restoring compiled
        patterns" below.
 
          #save <filename>
 
-       This  command  is used to save a set of compiled patterns to a file, as
-       described in the section entitled "Saving and restoring  compiled  pat-
+       This command is used to save a set of compiled patterns to a  file,  as
+       described  in  the section entitled "Saving and restoring compiled pat-
        terns" below.
 
          #subject <modifier-list>
 
-       This  command  sets  a default modifier list that applies to all subse-
-       quent subject lines. Modifiers on a subject line can change these  set-
+       This command sets a default modifier list that applies  to  all  subse-
+       quent  subject lines. Modifiers on a subject line can change these set-
        tings.
+
+         #if CONDITION
+         ...
+         #endif
+
+       If CONDITION is true, then the command is printed, and its contents are
+       processed as normal, including printing the commandlines to the output.
+       If CONDITION is false, then all lines between the  "#if"  and  "#endif"
+       are skipped and not printed. The CONDITION can be any of the conditions
+       which  are  tested  by  the  "-C"  commandline  option  and  which  set
+       pcre2test's exit code to a boolean value. The  CONDITION  may  also  be
+       preceded by "!".
 
 
 MODIFIER SYNTAX
