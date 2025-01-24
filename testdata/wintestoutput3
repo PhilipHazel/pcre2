@@ -14,7 +14,7 @@ No match
 
 /^[\w]+/locale=french
     École
- 0: École
+ 0: \xc9cole
 
 /^[\W]+/
     École
@@ -46,7 +46,7 @@ No match
 
 /^\w+/locale=french
     École
- 0: École
+ 0: \xc9cole
 
 /(.+)\b(.+)/
     École
@@ -68,9 +68,9 @@ No match
 
 /École/i,locale=french
     École
- 0: École
+ 0: \xc9cole
     école
- 0: école
+ 0: \xe9cole
 
 /\w/I
 Capture group count = 0
@@ -82,9 +82,9 @@ Subject length lower bound = 1
 Capture group count = 0
 Starting code units: 0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P
   Q R S T U V W X Y Z _ a b c d e f g h i j k l m n o p q r s t u v w x y z
-  ƒ Š Œ Ž š œ ž Ÿ ª ² ³ µ ¹ º À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö
-  Ø Ù Ú Û Ü Ý Þ ß à á â ã ä å æ ç è é ê ë ì í î ï ð ñ ò ó ô õ ö ø ù ú û ü ý
-  þ ÿ
+  \x83 \x8a \x8c \x8e \x9a \x9c \x9e \x9f \xaa \xb2 \xb3 \xb5 \xb9 \xba \xc0 \xc1 \xc2 \xc3 \xc4 \xc5 \xc6 \xc7 \xc8 \xc9 \xca \xcb \xcc \xcd \xce \xcf \xd0 \xd1 \xd2 \xd3 \xd4 \xd5 \xd6
+  \xd8 \xd9 \xda \xdb \xdc \xdd \xde \xdf \xe0 \xe1 \xe2 \xe3 \xe4 \xe5 \xe6 \xe7 \xe8 \xe9 \xea \xeb \xec \xed \xee \xef \xf0 \xf1 \xf2 \xf3 \xf4 \xf5 \xf6 \xf8 \xf9 \xfa \xfb \xfc \xfd
+  \xfe \xff
 Subject length lower bound = 1
 
 # All remaining tests are in the french locale, so set the default.
@@ -93,35 +93,35 @@ Subject length lower bound = 1
 
 /^[\xc8-\xc9]/i
     École
- 0: É
+ 0: \xc9
     école
- 0: é
+ 0: \xe9
 
 /^[\xc8-\xc9]/
     École
- 0: É
+ 0: \xc9
 \= Expect no match 
     école
 No match
 
 /\xb5/i
     µ
- 0: µ
+ 0: \xb5
 \= Expect no match
     \x9c
 No match
 
 /ÿ/i
     \xff
- 0: ÿ
+ 0: \xff
 \= Expect no match
     y
 No match
 
 /(.)\1/i
     \xfe\xde
- 0: þÞ
- 1: þ
+ 0: \xfe\xde
+ 1: \xfe
 
 /\W+/
     >>>\xaa<<<
@@ -143,21 +143,21 @@ No match
 
 /\w+/
     >>>\xaa<<<
- 0: ª
+ 0: \xaa
     >>>\xba<<< 
- 0: º
+ 0: \xba
 
 /[\w]+/
     >>>\xaa<<<
- 0: ª
+ 0: \xaa
     >>>\xba<<< 
- 0: º
+ 0: \xba
 
 /[[:alpha:]]+/
     >>>\xaa<<<
- 0: ª
+ 0: \xaa
     >>>\xba<<< 
- 0: º
+ 0: \xba
     
 /[[:alpha:]][[:lower:]][[:upper:]]/IB
 ------------------------------------------------------------------
@@ -170,9 +170,9 @@ No match
 ------------------------------------------------------------------
 Capture group count = 0
 Starting code units: A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-  a b c d e f g h i j k l m n o p q r s t u v w x y z ƒ Š Œ Ž š œ ž Ÿ ª µ º
-  À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö Ø Ù Ú Û Ü Ý Þ ß à á â ã ä å
-  æ ç è é ê ë ì í î ï ð ñ ò ó ô õ ö ø ù ú û ü ý þ ÿ
+  a b c d e f g h i j k l m n o p q r s t u v w x y z \x83 \x8a \x8c \x8e \x9a \x9c \x9e \x9f \xaa \xb5 \xba
+  \xc0 \xc1 \xc2 \xc3 \xc4 \xc5 \xc6 \xc7 \xc8 \xc9 \xca \xcb \xcc \xcd \xce \xcf \xd0 \xd1 \xd2 \xd3 \xd4 \xd5 \xd6 \xd8 \xd9 \xda \xdb \xdc \xdd \xde \xdf \xe0 \xe1 \xe2 \xe3 \xe4 \xe5
+  \xe6 \xe7 \xe8 \xe9 \xea \xeb \xec \xed \xee \xef \xf0 \xf1 \xf2 \xf3 \xf4 \xf5 \xf6 \xf8 \xf9 \xfa \xfb \xfc \xfd \xfe \xff
 Subject length lower bound = 3
 
 # End of wintestinput3 
