@@ -6,6 +6,12 @@ import subprocess
 import shutil
 import re
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(f"{script_dir}/../../maint")
+from UpdateCommon import CURRENT_RELEASE
+
+print(f"Building site for release {CURRENT_RELEASE}")
+
 # Helper function to take a document and extract its title
 
 def extract_title(doc_str):
@@ -15,7 +21,6 @@ def extract_title(doc_str):
 
 # Change directory to the `pages` directory
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(f"{script_dir}/..")
 
 # Clean the automatic directories
@@ -43,8 +48,29 @@ aliases = ["/doc/html/{base}.html"]
 +++
 
 """)
-        outfile.flush()
-        subprocess.run(['perl', '../maint/132html', '-noheader', base], stdin=infile, stdout=outfile)
+
+        # Run and capture the output
+        result = subprocess.run(['perl', '../maint/132html', '-noheader', base], stdin=infile, capture_output=True, text=True)
+        output = result.stdout
+
+        # Adjust the links for the website's structure
+        def adjust_link(match):
+            existing = match[0]
+            href = match[1]
+            try_match = re.match(r'^(https?://|#)', href)
+            if try_match:
+                return existing
+            try_match = re.match(r'^([^/]+).html((?:#[^/]+)?)$', href)
+            if try_match:
+                return f'href="../{try_match[1]}/{try_match[2]}"'
+            try_match = re.match(r'^(README|NON-AUTOTOOLS-BUILD).txt$', href)
+            if try_match:
+                return f'href="../../guide/{try_match[1].lower()}/"'
+            raise Exception(f"Could not adjust link {href}")
+        
+        output = re.sub(r'href="([^"]*)"', adjust_link, output)
+
+        outfile.write(output)
 
 # - 2) The index page
 
@@ -64,7 +90,18 @@ first.
 
     # Extract both the tables from the input file
     tables = re.search(r'<table>.*</table>', index_content, re.DOTALL)
-    f.write(tables[0] + "\n")
+
+    # Adjust the links for the website's structure
+    def adjust_link(match):
+        href = match[1]
+        try_match = re.match(r'^([^/]+).html$', href)
+        if try_match:
+            return f'href="./{try_match[1]}/"'
+        raise Exception(f"Could not adjust link {href}")
+
+    tables = re.sub(r'href="([^"]*)"', adjust_link, tables[0])
+
+    f.write(tables + "\n")
 
 # Import the project pages
 
@@ -77,6 +114,21 @@ title = "{title}"
 +++
 
 {content}
+""")
+
+# Import the guide pages
+
+os.makedirs(f'content/guide', exist_ok=True)
+for file in ['README', 'NON-AUTOTOOLS-BUILD']:
+    with open(f'../{file}', 'r') as infile, open(f'content/guide/{file}.md', 'w') as outfile:
+        content = infile.read()
+        outfile.write(f"""+++
+title = "{file}"
++++
+
+```
+{content}
+```
 """)
 
 # Run commands to build site
@@ -94,6 +146,6 @@ commands = [
 ]
 
 for command in commands:
-    result = subprocess.run(command)
+    result = subprocess.run(command, env={**os.environ, "HUGO_PARAMS_release": CURRENT_RELEASE})
     if result.returncode != 0:
         raise Exception(f"Command '{command}' failed with exit code {result.returncode}")

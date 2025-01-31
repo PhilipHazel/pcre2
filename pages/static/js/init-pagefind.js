@@ -3,12 +3,12 @@ const pagefind = await import("../pagefind/pagefind.js");
 pagefind.init();
 
 const searchContainer = document.getElementById("nav-search");
-searchContainer.style.display = "block";
+const searchBox = searchContainer.firstElementChild;
+searchBox.disabled = false; // If user has not enabled JS, the search box will be disabled
 
 const resultsContainer = document.getElementById("search-results");
 const resultsList = resultsContainer.firstElementChild;
 
-const searchBox = searchContainer.firstElementChild;
 const process = (results) => {
     if (searchBox.value === "") {
         resultsContainer.style.display = "none";

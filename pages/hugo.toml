@@ -9,3 +9,6 @@ disableKinds = ["taxonomy", "term", "rss"]
       unsafe = true
   [markup.highlight]
     noClasses = false
+
+[params]
+  release = 'Unknown'

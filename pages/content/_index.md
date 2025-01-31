@@ -182,14 +182,14 @@ Other systems are likely to work (including mobile, embedded platforms, and comm
 
 PCRE2 releases support CMake for building, and for UNIX platforms include a `./configure` script built by Autoconf. Build files for the Bazel build system and `zig build` are also included. Integrating PCRE2 with other systems can be done by including the `.c` files in an existing project.
 
-Please see the files [README](https://github.com/PCRE2Project/pcre2/blob/master/README) and [NON-AUTOTOOLS-BUILD](https://github.com/PCRE2Project/pcre2/blob/master/NON-AUTOTOOLS-BUILD) for full build documentation, as well as the man pages, including [`man pcre2/doc/pcre2build.3`](./doc/pcre2build/).
+Please see the files [README](./guide/readme/) and [NON-AUTOTOOLS-BUILD](./guide/non-autotools-build/) for full build documentation, as well as the man pages, including [`man pcre2/doc/pcre2build.3`](./doc/pcre2build/).
 
 ## Licence
 
 PCRE2 is released under the **BSD 3-clause licence** with a PCRE2 Exception. It is open-source and also corporate-friendly.
 
-- See [LICENCE](https://github.com/PCRE2Project/pcre2/blob/master/LICENCE.md) for legal text.
-- See [AUTHORS](https://github.com/PCRE2Project/pcre2/blob/master/AUTHORS.md) for details of the current maintainers of PCRE2 and acknowledgements of its contributors, including Philip Hazel, the original author.
+- See [LICENCE](./project/licence/) for legal text.
+- See [AUTHORS](./project/authors/) for details of the current maintainers of PCRE2 and acknowledgements of its contributors, including Philip Hazel, the original author.
 
 ## Contributing & support
 
@@ -197,6 +197,6 @@ Join the community by reporting issues or asking questions via [GitHub issues](h
 
 Contributions ranging from bug fixes to feature requests are welcome, and can be made via GitHub pull requests.
 
-Please review our [SECURITY](https://github.com/PCRE2Project/pcre2/blob/master/SECURITY.md) policy for information on reporting security issues.
+Please review our [SECURITY](./project/security/) policy for information on reporting security issues.
 
 Release announcements will be made via the [pcre2-dev@googlegroups.com](https://groups.google.com/g/pcre2-dev) mailing list, where you can also start discussions about PCRE2 issues and development. You can browse the [list archives](https://groups.google.com/g/pcre2-dev).
