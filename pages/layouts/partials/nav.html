@@ -1,14 +1,14 @@
-<header class="site-header">
-  <nav class="site-nav">
-    <a class="logo" href="{{ .Site.BaseURL }}">
-      {{ .Site.Title }}
-    </a>
-    <ul class="main-menu">
-      {{ range.Site.Menus.main }}
-      <li>
-        <a href="{{ .URL }}">{{ .Name }}</a>
-      </li>
-      {{ end }}
-    </ul>
-  </nav>
+<header>
+<div class="header-content">
+
+    <nav>
+        <a class="nav-home" href="{{ "/" | relURL }}" role="button" aria-label="Home"></a>
+        {{ partial "nav-lhs.html" . }}
+        <div class="nav-glue"></div>
+        {{ partial "nav-rhs.html" . }}
+    </nav>
+
+    {{ partial "header-search-results.html" . }}
+
+</div>
 </header>

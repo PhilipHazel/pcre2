@@ -1,3 +1,6 @@
 .hugo_build.lock
 public/
 resources/
+content/doc/
+content/project/**
+!content/project/_index.md

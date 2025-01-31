@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="50" height="400" version="1.1" viewBox="-10 0 50 400" xmlns="http://www.w3.org/2000/svg">
+ <g fill="#0085cc">
+  <circle cx="5" cy="45" r="5"/>
+  <circle cx="30" cy="20" r="5"/>
+  <circle cx="5" cy="95" r="5"/>
+  <circle cx="30" cy="70" r="5"/>
+  <circle cx="5" cy="145" r="5"/>
+  <circle cx="30" cy="120" r="5"/>
+  <circle cx="5" cy="195" r="5"/>
+  <circle cx="30" cy="170" r="5"/>
+  <circle cx="5" cy="245" r="5"/>
+  <circle cx="30" cy="220" r="5"/>
+  <circle cx="5" cy="295" r="5"/>
+  <circle cx="30" cy="270" r="5"/>
+  <circle cx="5" cy="345" r="5"/>
+  <circle cx="30" cy="320" r="5"/>
+  <circle cx="5" cy="395" r="5"/>
+  <circle cx="30" cy="370" r="5"/>
+ </g>
+</svg>
