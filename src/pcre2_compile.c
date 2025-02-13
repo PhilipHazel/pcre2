@@ -55,7 +55,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #else
 #define PRINTABLE(c) ((c) >= 32 && (c) < 127)
 #endif
-#include "pcre2_printint.c"
+#include "pcre2_printint.h"
 #define DEBUG_CALL_PRINTINT
 #endif
 

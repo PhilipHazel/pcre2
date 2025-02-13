@@ -279,8 +279,8 @@ c_files=(
   src/pcre2_intmodedep.h
   src/pcre2_jit_char_inc.h
   src/pcre2_jit_compile.c
-  src/pcre2_jit_match.c
-  src/pcre2_jit_misc.c
+  src/pcre2_jit_match.h
+  src/pcre2_jit_misc.h
   src/pcre2_jit_neon_inc.h
   src/pcre2_jit_simd_inc.h
   src/pcre2_jit_test.c
@@ -290,7 +290,7 @@ c_files=(
   src/pcre2_newline.c
   src/pcre2_ord2utf.c
   src/pcre2_pattern_info.c
-  src/pcre2_printint.c
+  src/pcre2_printint.h
   src/pcre2_script_run.c
   src/pcre2_serialize.c
   src/pcre2_string_utils.c
@@ -300,7 +300,7 @@ c_files=(
   src/pcre2_tables.c
   src/pcre2_ucd.c
   src/pcre2_ucp.h
-  src/pcre2_ucptables.c
+  src/pcre2_ucptables.h
   src/pcre2_util.h
   src/pcre2_valid_utf.c
   src/pcre2_xclass.c
